@@ -28,19 +28,29 @@ func NewLocalWiki(config LocalWikiConfig) (*LocalWiki, error) {
 	return wiki, nil
 }
 
-func (w *LocalWiki) GetNode(id wiki.NodeID) *LocalNode {
-	for _, node := range w.nodes {
-		if node.GetID() == id {
-			return node
-		}
-	}
-	return nil
-}
-
 func (w *LocalWiki) GetNodes() ([]*LocalNode, error) {
 	var nodes []*LocalNode
 	nodes = append(nodes, w.nodes...)
 	return nodes, nil
+}
+
+func (w *LocalWiki) FindNodes(filter wiki.NodeFilter) ([]*LocalNode, error) {
+	var nodes []*LocalNode
+	for _, node := range w.nodes {
+		if filter(node) {
+			nodes = append(nodes, node)
+		}
+	}
+	return nodes, nil
+}
+
+func (w *LocalWiki) GetNode(id wiki.NodeID) (*LocalNode, error) {
+	for _, node := range w.nodes {
+		if node.GetID() == id {
+			return node, nil
+		}
+	}
+	return nil, nil
 }
 
 func (w *LocalWiki) FindNode(filter wiki.NodeFilter) (*LocalNode, error) {

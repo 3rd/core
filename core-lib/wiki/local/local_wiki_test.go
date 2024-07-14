@@ -61,13 +61,15 @@ func TestLocalWiki(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Run("Get existing node", func(t *testing.T) {
-			node := localWiki.GetNode("root-1")
+			node, err := localWiki.GetNode("root-1")
+			assert.NoError(t, err)
 			assert.NotNil(t, node)
 			assert.Equal(t, "root-1", node.GetName())
 		})
 
 		t.Run("Get non-existing node", func(t *testing.T) {
-			node := localWiki.GetNode("non-existing")
+			node, err := localWiki.GetNode("non-existing")
+			assert.NoError(t, err)
 			assert.Nil(t, node)
 		})
 	})
