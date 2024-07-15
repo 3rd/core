@@ -61,3 +61,30 @@ func (n *LocalNode) Refresh() error {
 	}
 	return n.Parse()
 }
+
+func (n *LocalNode) GetTasks() []*wiki.Task {
+	syslangTasks := n.document.GetTasks()
+	tasks := []*wiki.Task{}
+	for _, syslangTask := range syslangTasks {
+		task := &wiki.Task{
+			Parent:     nil,
+			Children:   []*wiki.Task{},
+			Sessions:   syslangTask.Sessions,
+			Schedule:   syslangTask.Schedule,
+			Text:       syslangTask.Title,
+			LineNumber: syslangTask.Line,
+			Status:     wiki.TASK_STATUS_DEFAULT,
+		}
+		if syslangTask.Status == syslang.TaskStatusActive {
+			task.Status = wiki.TASK_STATUS_ACTIVE
+		}
+		if syslangTask.Status == syslang.TaskStatusDone {
+			task.Status = wiki.TASK_STATUS_DONE
+		}
+		if syslangTask.Status == syslang.TaskStatusCancelled {
+			task.Status = wiki.TASK_STATUS_CANCELLED
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks
+}

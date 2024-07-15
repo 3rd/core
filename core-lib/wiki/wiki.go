@@ -5,4 +5,5 @@ type Wiki interface {
 	FindNodes(filter NodeFilter) ([]*Node, error)
 	GetNode(id NodeID) (*Node, error)
 	FindNode(filter NodeFilter) (*Node, error)
+	Refresh() error
 }
