@@ -16,7 +16,7 @@ func TestLocalWiki(t *testing.T) {
 
 	config := LocalWikiConfig{
 		Root:  testDataPath,
-		Parse: true,
+		Parse: PARSE_MODE_FULL,
 	}
 
 	t.Run("NewLocalWiki", func(t *testing.T) {

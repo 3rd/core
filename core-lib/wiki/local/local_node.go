@@ -1,6 +1,8 @@
 package local
 
 import (
+	"strings"
+
 	"github.com/3rd/core/core-lib/fs"
 	"github.com/3rd/core/core-lib/wiki"
 	"github.com/3rd/syslang/go-syslang/pkg/syslang"
@@ -8,7 +10,8 @@ import (
 
 type LocalNode struct {
 	fs.File
-	document *syslang.Document
+	document   *syslang.Document
+	parsedMode PARSE_MODE
 }
 
 func NewLocalNode(path string) (*LocalNode, error) {
@@ -17,7 +20,7 @@ func NewLocalNode(path string) (*LocalNode, error) {
 		return nil, err
 	}
 
-	node := LocalNode{*file, nil}
+	node := LocalNode{*file, nil, PARSE_MODE_NONE}
 	return &node, nil
 }
 
@@ -43,11 +46,28 @@ func (n *LocalNode) IsParsed() bool {
 	return n.document != nil
 }
 
-func (n *LocalNode) Parse() error {
+func (n *LocalNode) Parse(mode PARSE_MODE) error {
+	if mode == PARSE_MODE_NONE {
+		panic("cannot parse with PARSE_MODE_NONE, you have a bug")
+	}
+	n.parsedMode = mode
+
 	text, err := n.Text()
 	if err != nil {
 		return err
 	}
+
+	if mode == PARSE_MODE_META {
+		if !strings.HasPrefix(text, "@meta") {
+			return nil
+		}
+		endIndex := strings.Index(text, "@end")
+		if endIndex == -1 {
+			return nil
+		}
+		text = text[:endIndex+len("@end")]
+	}
+
 	n.document, err = syslang.NewDocument(text)
 	if err != nil {
 		return err
@@ -59,7 +79,7 @@ func (n *LocalNode) Refresh() error {
 	if !n.IsParsed() {
 		return nil
 	}
-	return n.Parse()
+	return n.Parse(n.parsedMode)
 }
 
 func (n *LocalNode) GetTasks() []*wiki.Task {

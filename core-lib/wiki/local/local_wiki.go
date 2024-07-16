@@ -1,15 +1,23 @@
 package local
 
 import (
-	"fmt"
+	"sync"
 
 	"github.com/3rd/core/core-lib/fs"
 	"github.com/3rd/core/core-lib/wiki"
 )
 
+type PARSE_MODE string
+
+const (
+	PARSE_MODE_NONE PARSE_MODE = "none"
+	PARSE_MODE_FULL PARSE_MODE = "full"
+	PARSE_MODE_META PARSE_MODE = "meta"
+)
+
 type LocalWikiConfig struct {
 	Root  string
-	Parse bool
+	Parse PARSE_MODE
 }
 
 type LocalWiki struct {
@@ -18,20 +26,18 @@ type LocalWiki struct {
 }
 
 func NewLocalWiki(config LocalWikiConfig) (*LocalWiki, error) {
-	wiki := &LocalWiki{
+	wiki := LocalWiki{
 		config: config,
 	}
 	err := wiki.Refresh()
 	if err != nil {
 		return nil, err
 	}
-	return wiki, nil
+	return &wiki, nil
 }
 
 func (w *LocalWiki) GetNodes() ([]*LocalNode, error) {
-	var nodes []*LocalNode
-	nodes = append(nodes, w.nodes...)
-	return nodes, nil
+	return w.nodes, nil
 }
 
 func (w *LocalWiki) FindNodes(filter wiki.NodeFilter) ([]*LocalNode, error) {
@@ -71,24 +77,25 @@ func (w *LocalWiki) Refresh() error {
 
 	// collect nodes, fail on the first collision
 	nodes := []*LocalNode{}
-	nodemap := map[wiki.NodeID]*LocalNode{}
+	var wg sync.WaitGroup
 	for _, file := range files {
-		node, err := NewLocalNode(file.GetPath())
-		if err != nil {
-			return err
-		}
-		if w.config.Parse {
-			err = node.Parse()
+		wg.Add(1)
+		go func(file fs.File) {
+			defer wg.Done()
+			node, err := NewLocalNode(file.GetPath())
 			if err != nil {
-				return err
+				return
 			}
-		}
-		nodes = append(nodes, node)
-		if previousNode, ok := nodemap[node.GetID()]; ok {
-			return fmt.Errorf("failed to open wiki, found colliding nodes with id: %v\nA: %v\nB: %v", node.GetName(), previousNode, node)
-		}
-		nodemap[node.GetID()] = node
+			if w.config.Parse != PARSE_MODE_NONE {
+				err = node.Parse(w.config.Parse)
+				if err != nil {
+					return
+				}
+			}
+			nodes = append(nodes, node)
+		}(file)
 	}
+	wg.Wait()
 
 	w.nodes = nodes
 	return nil

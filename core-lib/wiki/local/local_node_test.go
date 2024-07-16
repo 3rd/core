@@ -33,7 +33,20 @@ func TestLocalNode(t *testing.T) {
 		node, err := NewLocalNode(path)
 		require.NoError(t, err)
 
-		err = node.Parse()
+		err = node.Parse("full")
+		assert.NoError(t, err)
+		assert.True(t, node.IsParsed())
+		assert.Equal(t, "Custom title", node.GetName())
+	})
+
+	t.Run("Parse only node meta and resolve custom title", func(t *testing.T) {
+		path, err := filepath.Abs("../../test-data/wiki/default/root-2")
+		require.NoError(t, err)
+
+		node, err := NewLocalNode(path)
+		require.NoError(t, err)
+
+		err = node.Parse("meta")
 		assert.NoError(t, err)
 		assert.True(t, node.IsParsed())
 		assert.Equal(t, "Custom title", node.GetName())
@@ -46,7 +59,7 @@ func TestLocalNode(t *testing.T) {
 		node, err := NewLocalNode(path)
 		require.NoError(t, err)
 
-		err = node.Parse()
+		err = node.Parse("full")
 		assert.NoError(t, err)
 		assert.True(t, node.IsParsed())
 
