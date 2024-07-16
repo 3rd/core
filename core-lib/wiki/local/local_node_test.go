@@ -38,4 +38,46 @@ func TestLocalNode(t *testing.T) {
 		assert.True(t, node.IsParsed())
 		assert.Equal(t, "Custom title", node.GetName())
 	})
+
+	t.Run("Get tasks", func(t *testing.T) {
+		path, err := filepath.Abs("../../test-data/wiki/tasks/sample")
+		require.NoError(t, err)
+
+		node, err := NewLocalNode(path)
+		require.NoError(t, err)
+
+		err = node.Parse()
+		assert.NoError(t, err)
+		assert.True(t, node.IsParsed())
+
+		tasks := node.GetTasks()
+		assert.Len(t, tasks, 4)
+
+		// [ ] task 1
+		assert.Equal(t, "task 1", tasks[0].Text)
+		assert.Equal(t, wiki.TASK_STATUS_DEFAULT, tasks[0].Status)
+		assert.Equal(t, uint32(2), tasks[0].LineNumber)
+		assert.Equal(t, uint32(0), tasks[0].Priority)
+
+		// [-] task 2
+		assert.Equal(t, "task 2", tasks[1].Text)
+		assert.Equal(t, wiki.TASK_STATUS_ACTIVE, tasks[1].Status)
+		assert.Equal(t, uint32(3), tasks[1].LineNumber)
+		assert.Equal(t, uint32(0), tasks[1].Priority)
+
+		// [x] task 2-2 Session: 2024.01.01 01:00-02:00
+		assert.Equal(t, "task 2-2", tasks[2].Text)
+		assert.Equal(t, wiki.TASK_STATUS_DONE, tasks[2].Status)
+		assert.Equal(t, uint32(4), tasks[2].LineNumber)
+		assert.Equal(t, uint32(0), tasks[2].Priority)
+		assert.Equal(t, 1, len(tasks[2].Sessions))
+		assert.NotNil(t, tasks[2].GetLastWorkSession())
+
+		// [ ] task 3 Schedule: 2024.01.01 10:00
+		assert.Equal(t, "task 3", tasks[3].Text)
+		assert.Equal(t, wiki.TASK_STATUS_DEFAULT, tasks[3].Status)
+		assert.Equal(t, uint32(6), tasks[3].LineNumber)
+		assert.Equal(t, uint32(0), tasks[3].Priority)
+		assert.NotNil(t, tasks[3].Schedule)
+	})
 }

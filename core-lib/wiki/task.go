@@ -2,8 +2,6 @@ package wiki
 
 import (
 	"time"
-
-	"github.com/3rd/syslang/go-syslang/pkg/syslang"
 )
 
 type TASK_STATUS string
@@ -22,14 +20,68 @@ const (
 	TASK_RE_DONE    TASK_PATTERN = `^\s*\[x\] (?P<Text>.*)$`
 )
 
+type TaskSession struct {
+	Start time.Time
+	End   *time.Time
+}
+
+func (session TaskSession) Duration() time.Duration {
+	if session.End == nil {
+		return time.Since(session.Start)
+	}
+	return session.End.Sub(session.Start)
+}
+
+func (session TaskSession) IsInProgress(atTime ...time.Time) bool {
+	if len(atTime) > 1 {
+		panic("IsInProgress takes at most one argument")
+	}
+	if len(atTime) == 1 {
+		return session.Start.Before(atTime[0]) && (session.End == nil || session.End.After(atTime[0]))
+	}
+	return session.End == nil
+}
+
+type TaskSchedule struct {
+	Start  time.Time
+	End    *time.Time
+	Repeat string
+}
+
+func (schedule TaskSchedule) Duration() time.Duration {
+	if schedule.End == nil {
+		return 0
+	}
+	return schedule.End.Sub(schedule.Start)
+}
+
+func (schedule TaskSchedule) IsInProgress(atTime ...time.Time) bool {
+	if len(atTime) != 1 {
+		panic("TaskSchedule.IsInProgress requires the atTime argument")
+	}
+	// between start and end
+	if schedule.End != nil && schedule.Start.Before(atTime[0]) && schedule.End.After(atTime[0]) {
+		return true
+	}
+	// same day, after start, no end
+	if schedule.Start.Day() == atTime[0].Day() && schedule.End == nil && schedule.Start.Before(atTime[0]) {
+		return true
+	}
+	return false
+}
+
+type TaskCompletion struct {
+	Timestamp time.Time
+}
+
 type Task struct {
 	Parent      *Task
 	Children    []*Task
-	Sessions    []syslang.TaskSession
-	Schedule    *syslang.TaskSchedule
+	Sessions    []TaskSession
+	Schedule    *TaskSchedule
+	Completions []TaskCompletion
 	Text        string
 	LineNumber  uint32
-	IndentLevel uint32
 	Status      TASK_STATUS
 	Priority    uint32
 	DetailLines []string
@@ -78,17 +130,17 @@ func (t *Task) GetTotalPriority() uint32 {
 	return priority
 }
 
-func (t *Task) GetIcon() rune {
-	if t.Status == TASK_STATUS_DONE {
-		return '☑'
-	}
-	return '☐'
-}
-
-func (t *Task) GetLastWorkSession() *syslang.TaskSession {
+func (t *Task) GetLastWorkSession() *TaskSession {
 	if len(t.Sessions) == 0 {
 		return nil
 	}
 	last := t.Sessions[len(t.Sessions)-1]
 	return &last
+}
+
+func (t *Task) GetIcon() rune {
+	if t.Status == TASK_STATUS_DONE {
+		return '☑'
+	}
+	return '☐'
 }

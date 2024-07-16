@@ -66,14 +66,39 @@ func (n *LocalNode) GetTasks() []*wiki.Task {
 	syslangTasks := n.document.GetTasks()
 	tasks := []*wiki.Task{}
 	for _, syslangTask := range syslangTasks {
+		sessions := []wiki.TaskSession{}
+		for _, session := range syslangTask.Sessions {
+			sessions = append(sessions, wiki.TaskSession{
+				Start: session.Start,
+				End:   session.End,
+			})
+		}
+
+		var schedule *wiki.TaskSchedule
+		if syslangTask.Schedule != nil {
+			schedule = &wiki.TaskSchedule{
+				Start:  syslangTask.Schedule.Start,
+				End:    syslangTask.Schedule.End,
+				Repeat: syslangTask.Schedule.Repeat,
+			}
+		}
+
+		completions := []wiki.TaskCompletion{}
+		for _, completion := range syslangTask.Completions {
+			completions = append(completions, wiki.TaskCompletion{
+				Timestamp: completion.Start,
+			})
+		}
+
 		task := &wiki.Task{
-			Parent:     nil,
-			Children:   []*wiki.Task{},
-			Sessions:   syslangTask.Sessions,
-			Schedule:   syslangTask.Schedule,
-			Text:       syslangTask.Title,
-			LineNumber: syslangTask.Line,
-			Status:     wiki.TASK_STATUS_DEFAULT,
+			Parent:      nil,
+			Children:    []*wiki.Task{},
+			Sessions:    sessions,
+			Schedule:    schedule,
+			Text:        syslangTask.Title,
+			LineNumber:  syslangTask.Line,
+			Status:      wiki.TASK_STATUS_DEFAULT,
+			Completions: completions,
 		}
 		if syslangTask.Status == syslang.TaskStatusActive {
 			task.Status = wiki.TASK_STATUS_ACTIVE
