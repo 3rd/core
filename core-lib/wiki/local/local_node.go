@@ -24,8 +24,8 @@ func NewLocalNode(path string) (*LocalNode, error) {
 	return &node, nil
 }
 
-func (n *LocalNode) GetID() wiki.NodeID {
-	return wiki.NodeID(n.GetName())
+func (n *LocalNode) GetID() string {
+	return n.GetName()
 }
 
 func (n *LocalNode) GetName() string {

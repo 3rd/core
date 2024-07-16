@@ -50,7 +50,7 @@ func (w *LocalWiki) FindNodes(filter wiki.NodeFilter) ([]*LocalNode, error) {
 	return nodes, nil
 }
 
-func (w *LocalWiki) GetNode(id wiki.NodeID) (*LocalNode, error) {
+func (w *LocalWiki) GetNode(id string) (*LocalNode, error) {
 	for _, node := range w.nodes {
 		if node.GetID() == id {
 			return node, nil

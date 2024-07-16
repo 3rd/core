@@ -1,9 +1,7 @@
 package wiki
 
-type NodeID string
-
 type Node interface {
-	GetID() NodeID
+	GetID() string
 	GetName() string
 	GetContent() (string, error)
 	GetTasks() []*Task

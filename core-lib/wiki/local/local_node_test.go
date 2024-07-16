@@ -16,7 +16,7 @@ func TestLocalNode(t *testing.T) {
 
 		node, err := NewLocalNode(path)
 		assert.NoError(t, err)
-		assert.Equal(t, wiki.NodeID("root-1"), node.GetID())
+		assert.Equal(t, "root-1", node.GetID())
 		assert.Equal(t, "root-1", node.GetName())
 		assert.Equal(t, path, node.GetPath())
 		assert.False(t, node.IsParsed())
