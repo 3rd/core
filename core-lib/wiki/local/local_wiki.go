@@ -1,6 +1,7 @@
 package local
 
 import (
+	"sort"
 	"sync"
 
 	"github.com/3rd/core/core-lib/fs"
@@ -78,8 +79,9 @@ func (w *LocalWiki) Refresh() error {
 	// collect nodes, fail on the first collision
 	nodes := []*LocalNode{}
 	var wg sync.WaitGroup
+	mutex := sync.Mutex{}
+	wg.Add(len(files))
 	for _, file := range files {
-		wg.Add(1)
 		go func(file fs.File) {
 			defer wg.Done()
 			node, err := NewLocalNode(file.GetPath())
@@ -92,10 +94,16 @@ func (w *LocalWiki) Refresh() error {
 					return
 				}
 			}
+			mutex.Lock()
 			nodes = append(nodes, node)
+			mutex.Unlock()
 		}(file)
 	}
 	wg.Wait()
+
+	sort.SliceStable(nodes, func(i, j int) bool {
+		return nodes[i].GetName() < nodes[j].GetName()
+	})
 
 	w.nodes = nodes
 	return nil
