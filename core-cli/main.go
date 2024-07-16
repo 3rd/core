@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"core/cmd"
 )
 
 func main() {
-	fmt.Println("Hello World")
-
-	os.Exit(0)
+	cmd.Execute()
 }
