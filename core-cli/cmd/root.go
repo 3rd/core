@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"core/utils"
 	"fmt"
 	"os"
 
@@ -8,6 +9,7 @@ import (
 )
 
 var cfgFile string
+var env = utils.GetEnv()
 
 var rootCmd = &cobra.Command{
 	Use:   "core",

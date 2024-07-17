@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"core/utils"
 	"fmt"
 	"path/filepath"
 
@@ -9,9 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var env = utils.GetEnv()
-
-var listCommand = &cobra.Command{
+var wikiListCommand = &cobra.Command{
 	Use:   "ls",
 	Short: "list wiki nodes",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -36,7 +33,7 @@ var listCommand = &cobra.Command{
 	},
 }
 
-var resolveCommand = &cobra.Command{
+var wikiResolveCommand = &cobra.Command{
 	Use:   "resolve <node>",
 	Short: "show node file path",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -77,9 +74,9 @@ var resolveCommand = &cobra.Command{
 func init() {
 	cmd := &cobra.Command{Use: "wiki"}
 
-	cmd.AddCommand(listCommand)
-	cmd.AddCommand(resolveCommand)
-	resolveCommand.Flags().Bool("strict", false, "Will not return the default would-be path for if the node is not found")
+	cmd.AddCommand(wikiListCommand)
+	cmd.AddCommand(wikiResolveCommand)
+	wikiResolveCommand.Flags().Bool("strict", false, "Will not return the default would-be path for if the node is not found")
 
 	rootCmd.AddCommand(cmd)
 }
