@@ -10,8 +10,10 @@ import (
 
 type LocalNode struct {
 	fs.File
-	document   *syslang.Document
-	parsedMode PARSE_MODE
+	document    *syslang.Document
+	parsedMode  PARSE_MODE
+	cachedName  *string
+	cachedTasks *[]syslang.Task
 }
 
 func NewLocalNode(path string) (*LocalNode, error) {
@@ -20,7 +22,13 @@ func NewLocalNode(path string) (*LocalNode, error) {
 		return nil, err
 	}
 
-	node := LocalNode{*file, nil, PARSE_MODE_NONE}
+	node := LocalNode{
+		*file,
+		nil,
+		PARSE_MODE_NONE,
+		nil,
+		nil,
+	}
 	return &node, nil
 }
 
@@ -29,11 +37,16 @@ func (n *LocalNode) GetID() string {
 }
 
 func (n *LocalNode) GetName() string {
+	if n.cachedName != nil {
+		return *n.cachedName
+	}
 	if n.document != nil {
 		title := n.document.GetTitle()
-		if title != "" {
-			return title
+		if title == "" {
+			title = n.File.GetName()
 		}
+		n.cachedName = &title
+		return title
 	}
 	return n.File.GetName()
 }
@@ -72,6 +85,10 @@ func (n *LocalNode) Parse(mode PARSE_MODE) error {
 	if err != nil {
 		return err
 	}
+
+	n.cachedName = nil
+	n.cachedTasks = nil
+
 	return nil
 }
 
@@ -83,8 +100,16 @@ func (n *LocalNode) Refresh() error {
 }
 
 func (n *LocalNode) GetTasks() []*wiki.Task {
-	syslangTasks := n.document.GetTasks()
 	tasks := []*wiki.Task{}
+
+	var syslangTasks []syslang.Task
+	if n.cachedTasks != nil {
+		syslangTasks = *n.cachedTasks
+	} else {
+		syslangTasks = n.document.GetTasks()
+		n.cachedTasks = &syslangTasks
+	}
+
 	for _, syslangTask := range syslangTasks {
 		sessions := []wiki.TaskSession{}
 		for _, session := range syslangTask.Sessions {
