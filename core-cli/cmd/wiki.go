@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 
 	wiki "github.com/3rd/core/core-lib/wiki/local"
 	"github.com/spf13/cobra"
@@ -17,18 +18,45 @@ var wikiListCommand = &cobra.Command{
 			panic("WIKI_ROOT not set")
 		}
 
-		wiki, err := wiki.NewLocalWiki(wiki.LocalWikiConfig{
-			Root:  root,
-			Parse: "meta",
-		})
+		isDebug, err := cmd.Flags().GetBool("debug")
 		if err != nil {
 			panic(err)
 		}
 
-		nodes, _ := wiki.GetNodes()
+		// regular
+		if !isDebug {
+			wiki, err := wiki.NewLocalWiki(wiki.LocalWikiConfig{
+				Root:  root,
+				Parse: "meta",
+			})
+			if err != nil {
+				panic(err)
+			}
+			nodes, _ := wiki.GetNodes()
 
-		for _, node := range nodes {
-			fmt.Printf("%v\n", node.GetID())
+			for _, node := range nodes {
+				fmt.Printf("%s\n", node.GetID())
+			}
+		}
+
+		// debug
+		if isDebug {
+			wiki, err := wiki.NewLocalWiki(wiki.LocalWikiConfig{
+				Root:  root,
+				Parse: "full",
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			nodes, _ := wiki.GetNodes()
+			sort.SliceStable(nodes, func(i, j int) bool {
+				return nodes[i].ParseDuration < nodes[j].ParseDuration
+			})
+
+			for _, node := range nodes {
+				fmt.Printf("%s %s\n", node.GetID(), node.ParseDuration)
+			}
 		}
 	},
 }
@@ -74,9 +102,11 @@ var wikiResolveCommand = &cobra.Command{
 func init() {
 	cmd := &cobra.Command{Use: "wiki"}
 
+	wikiListCommand.Flags().Bool("debug", false, "debug parsing time for each nodes")
 	cmd.AddCommand(wikiListCommand)
+
+	wikiResolveCommand.Flags().Bool("strict", false, "will not return the default would-be path for if the node is not found")
 	cmd.AddCommand(wikiResolveCommand)
-	wikiResolveCommand.Flags().Bool("strict", false, "Will not return the default would-be path for if the node is not found")
 
 	rootCmd.AddCommand(cmd)
 }

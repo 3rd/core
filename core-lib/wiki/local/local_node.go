@@ -2,6 +2,7 @@ package local
 
 import (
 	"strings"
+	"time"
 
 	"github.com/3rd/core/core-lib/fs"
 	"github.com/3rd/core/core-lib/wiki"
@@ -10,10 +11,11 @@ import (
 
 type LocalNode struct {
 	fs.File
-	document    *syslang.Document
-	parsedMode  PARSE_MODE
-	cachedName  *string
-	cachedTasks *[]syslang.Task
+	document      *syslang.Document
+	parsedMode    PARSE_MODE
+	cachedName    *string
+	cachedTasks   *[]syslang.Task
+	ParseDuration time.Duration
 }
 
 func NewLocalNode(path string) (*LocalNode, error) {
@@ -28,6 +30,7 @@ func NewLocalNode(path string) (*LocalNode, error) {
 		PARSE_MODE_NONE,
 		nil,
 		nil,
+		0,
 	}
 	return &node, nil
 }
@@ -81,10 +84,12 @@ func (n *LocalNode) Parse(mode PARSE_MODE) error {
 		text = text[:endIndex+len("@end")]
 	}
 
+	start := time.Now()
 	n.document, err = syslang.NewDocument(text)
 	if err != nil {
 		return err
 	}
+	n.ParseDuration = time.Since(start)
 
 	n.cachedName = nil
 	n.cachedTasks = nil
