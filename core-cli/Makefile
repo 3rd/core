@@ -16,6 +16,10 @@ dev: ## watch for changes and run tests
 	watchexec --restart -c reset --exts go -- "go test ./..."
 .PHONY: dev
 
+dev-task-interactive: ## dev: task interactive
+	watchexec --stop-timeout=0 --no-process-group --stop-signal SIGKILL -e go -r -c clear -w . -- "go run . task interactive"
+.PHONY: dev
+
 test: ## run tests
 	go test ./...
 .PHONY: test

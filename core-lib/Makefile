@@ -13,7 +13,7 @@ help: ## help
 .PHONY: help
 
 dev: ## watch for changes and run tests
-	watchexec --restart -c reset --exts go -- "go test ./..."
+	watchexec --restart -c reset --exts go -- "gotest -count=1 ./..."
 .PHONY: dev
 
 test: ## run tests

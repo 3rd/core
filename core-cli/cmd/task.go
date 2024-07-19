@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	taskinteractive "core/ui/task_interactive"
 	"fmt"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var currentTaskCommand = &cobra.Command{
+var taskCurrentCommand = &cobra.Command{
 	Use:   "current",
 	Short: "list the currently in-progress task (first only)",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -48,11 +49,25 @@ var currentTaskCommand = &cobra.Command{
 	},
 }
 
+var taskInteractiveCommand = &cobra.Command{
+	Use:   "interactive",
+	Short: "enter interactive task mode",
+	Run: func(cmd *cobra.Command, args []string) {
+		root := env.TASK_ROOT
+		if len(root) == 0 {
+			panic("TASK_ROOT not set")
+		}
+		taskinteractive.Run()
+	},
+}
+
 func init() {
 	cmd := &cobra.Command{Use: "task"}
 
-	currentTaskCommand.Flags().BoolP("elapsed", "e", false, "include elapsed time")
-	cmd.AddCommand(currentTaskCommand)
+	taskCurrentCommand.Flags().BoolP("elapsed", "e", false, "include elapsed time")
+	cmd.AddCommand(taskCurrentCommand)
+
+	cmd.AddCommand(taskInteractiveCommand)
 
 	rootCmd.AddCommand(cmd)
 }

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
-	"sort"
 
 	wiki "github.com/3rd/core/core-lib/wiki/local"
 	"github.com/spf13/cobra"
@@ -48,12 +47,7 @@ var wikiListCommand = &cobra.Command{
 			if err != nil {
 				panic(err)
 			}
-
 			nodes, _ := wiki.GetNodes()
-			sort.SliceStable(nodes, func(i, j int) bool {
-				return nodes[i].ParseDuration < nodes[j].ParseDuration
-			})
-
 			for _, node := range nodes {
 				fmt.Printf("%s %s\n", node.GetID(), node.ParseDuration)
 			}
