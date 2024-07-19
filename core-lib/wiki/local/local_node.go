@@ -141,6 +141,7 @@ func (n *LocalNode) GetTasks() []*wiki.Task {
 		}
 
 		task := &wiki.Task{
+			Node:        n,
 			Parent:      nil,
 			Children:    []*wiki.Task{},
 			Sessions:    sessions,

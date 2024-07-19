@@ -67,6 +67,7 @@ func TestLocalNode(t *testing.T) {
 		assert.Len(t, tasks, 4)
 
 		// [ ] task 1
+		assert.Equal(t, node, tasks[0].Node)
 		assert.Equal(t, "task 1", tasks[0].Text)
 		assert.Equal(t, wiki.TASK_STATUS_DEFAULT, tasks[0].Status)
 		assert.Equal(t, uint32(2), tasks[0].LineNumber)

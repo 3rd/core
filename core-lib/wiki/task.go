@@ -79,6 +79,7 @@ type TaskCompletion struct {
 }
 
 type Task struct {
+	Node        Node
 	Parent      *Task
 	Children    []*Task
 	Sessions    []TaskSession
