@@ -11,8 +11,9 @@ const (
 )
 
 type AppState struct {
-	Mode  APP_MODE
-	Tasks []*wiki.Task
+	Mode                 APP_MODE
+	Tasks                []*wiki.Task
+	LongestProjectLength int
 }
 
 func (app *AppState) GetLongestTaskLength() int {

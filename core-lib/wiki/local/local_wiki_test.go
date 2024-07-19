@@ -85,7 +85,7 @@ func TestLocalWiki(t *testing.T) {
 		err = os.WriteFile(tmpPath, []byte(""), 0644)
 		require.NoError(t, err)
 
-		err = localWiki.Refresh()
+		err = localWiki.Reload()
 		assert.NoError(t, err)
 		nodes, err = localWiki.GetNodes()
 		assert.NoError(t, err)

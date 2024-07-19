@@ -11,16 +11,16 @@ import (
 
 type Header struct {
 	ui.Component
-	State *state.AppState
-	Width int
+	AppState *state.AppState
+	Width    int
 }
 
-func (h *Header) Render() ui.Buffer {
+func (c *Header) Render() ui.Buffer {
 	b := ui.Buffer{}
 
 	// styles
 	bgStyle := ui.Style{Background: theme.HEADER_BG, Foreground: theme.HEADER_FG}
-	if h.State.Mode == state.APP_MODE_FOCUS {
+	if c.AppState.Mode == state.APP_MODE_FOCUS {
 		bgStyle = ui.Style{Background: theme.HEADER_BG_FOCUSED, Foreground: theme.HEADER_FG_FOCUSED}
 	}
 	leftStyle := bgStyle
@@ -29,7 +29,7 @@ func (h *Header) Render() ui.Buffer {
 	rightStyle := leftStyle
 
 	// bg
-	b.Resize(h.Width, 4)
+	b.Resize(c.Width, 4)
 	b.FillStyle(bgStyle)
 
 	// left
@@ -40,23 +40,23 @@ func (h *Header) Render() ui.Buffer {
 	leftLabel := ui.Buffer{}
 	text := ""
 	leftLabel.Text(0, 0, text, leftStyle)
-	text = fmt.Sprintf("%d", h.State.GetNotDoneTasksCount())
+	text = fmt.Sprintf("%d", c.AppState.GetNotDoneTasksCount())
 	leftLabel.Text(leftLabel.Width()+1, 0, text, leftStyle)
 	text = ""
 	leftLabel.Text(leftLabel.Width()+1, 0, text, leftStyle)
-	text = fmt.Sprintf("%d", h.State.GetDoneTasksCount())
+	text = fmt.Sprintf("%d", c.AppState.GetDoneTasksCount())
 	leftLabel.Text(leftLabel.Width()+1, 0, text, leftStyle)
 
 	// left bar
 	leftBar := ui.Buffer{}
 	barWidth := leftLabel.Width()
-	min := h.State.GetLongestTaskLength() + 3
+	min := c.AppState.LongestProjectLength + 3
 
 	if barWidth < min {
 		barWidth = min
 	}
 
-	var point = float64(barWidth) * (float64(h.State.GetDoneTasksCount()) / (float64(h.State.GetDoneTasksCount()) + float64(h.State.GetNotDoneTasksCount())))
+	var point = float64(barWidth) * (float64(c.AppState.GetDoneTasksCount()) / (float64(c.AppState.GetDoneTasksCount()) + float64(c.AppState.GetNotDoneTasksCount())))
 
 	for i := 0; i < barWidth; i++ {
 		ch := "▭"
@@ -77,7 +77,7 @@ func (h *Header) Render() ui.Buffer {
 	right.Resize(1, 4)
 
 	dayTime := time.Duration(0)
-	for _, t := range h.State.Tasks {
+	for _, t := range c.AppState.Tasks {
 		dayTime += t.GetWorkTime()
 	}
 
@@ -90,16 +90,16 @@ func (h *Header) Render() ui.Buffer {
 	right.ApplyStyle(rightStyle)
 
 	b.DrawBuffer(0, 0, left)
-	rightX := h.Width - right.Width()
+	rightX := c.Width - right.Width()
 	if rightX < 0 {
 		rightX = 0
 	}
 	b.DrawBuffer(rightX, 0, right)
 
 	// center
-	if h.State.Mode == state.APP_MODE_FOCUS {
+	if c.AppState.Mode == state.APP_MODE_FOCUS {
 		center := ui.Buffer{}
-		center.Resize(h.Width-left.Width()-right.Width(), 4)
+		center.Resize(c.Width-left.Width()-right.Width(), 4)
 		center.FillStyle(bgStyle)
 		text := "FOCUS"
 		center.Text(center.Width()/2-len(text)/2, 1, text, bgStyle)

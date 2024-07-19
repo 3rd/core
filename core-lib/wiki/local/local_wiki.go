@@ -17,8 +17,9 @@ const (
 )
 
 type LocalWikiConfig struct {
-	Root  string
-	Parse PARSE_MODE
+	Root            string
+	Parse           PARSE_MODE
+	SkipInitialLoad bool
 }
 
 type LocalWiki struct {
@@ -30,9 +31,11 @@ func NewLocalWiki(config LocalWikiConfig) (*LocalWiki, error) {
 	wiki := LocalWiki{
 		config: config,
 	}
-	err := wiki.Refresh()
-	if err != nil {
-		return nil, err
+	if !config.SkipInitialLoad {
+		err := wiki.Reload()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &wiki, nil
 }
@@ -69,7 +72,7 @@ func (w *LocalWiki) FindNode(filter wiki.NodeFilter) (*LocalNode, error) {
 	return nil, nil
 }
 
-func (w *LocalWiki) Refresh() error {
+func (w *LocalWiki) Reload() error {
 	// walk root
 	files, err := fs.WalkFiles(w.config.Root, nil)
 	if err != nil {
