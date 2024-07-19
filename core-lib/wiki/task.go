@@ -64,8 +64,12 @@ func (schedule TaskSchedule) IsInProgress(atTime ...time.Time) bool {
 		return true
 	}
 	// same day, after start, no end
-	if schedule.Start.Day() == atTime[0].Day() && schedule.End == nil && schedule.Start.Before(atTime[0]) {
-		return true
+	if schedule.End == nil {
+		targetDayStart := time.Date(atTime[0].Year(), atTime[0].Month(), atTime[0].Day(), 0, 0, 0, 0, atTime[0].Location())
+		scheduleDayStart := time.Date(schedule.Start.Year(), schedule.Start.Month(), schedule.Start.Day(), 0, 0, 0, 0, schedule.Start.Location())
+		if targetDayStart.Equal(scheduleDayStart) {
+			return true
+		}
 	}
 	return false
 }
