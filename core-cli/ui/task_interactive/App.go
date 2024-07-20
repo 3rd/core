@@ -30,6 +30,22 @@ func (app *App) Setup() {
 	getTasksResult := app.providers.GetTasks()
 	app.state.Tasks = getTasksResult.Tasks
 	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
+
+	// redraw ticker
+	done := make(chan bool)
+	ticker := time.NewTicker(time.Second / 2)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if app.state.Mode == state.APP_MODE_DEFAULT {
+					app.Update()
+				}
+			}
+		}
+	}()
 }
 
 func (app *App) navigateDown() {
