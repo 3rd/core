@@ -91,8 +91,7 @@ var taskInteractiveCommand = &cobra.Command{
 					if task.Status == wiki.TASK_STATUS_ACTIVE || task.IsInProgress() {
 						tasks = append(tasks, task)
 						hasAddedTaskForNode = true
-					}
-					if task.Status == wiki.TASK_STATUS_DONE {
+					} else if task.Status == wiki.TASK_STATUS_DONE {
 						last_session := task.GetLastWorkSession()
 						if last_session != nil && now.Sub(last_session.Start) < recentlyDoneLimit {
 							// todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)

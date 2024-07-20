@@ -1,2 +1,7 @@
+.st*
+archive*
+browser*
+
+linter
 syslang
 go-futui

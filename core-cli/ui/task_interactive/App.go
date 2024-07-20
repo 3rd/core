@@ -77,9 +77,6 @@ func (app *App) Setup() {
 	if err := w.AddRecursive(app.providers.GetRoot()); err != nil {
 		log.Fatalln(err)
 	}
-	for path, f := range w.WatchedFiles() {
-		fmt.Printf("%s: %s\n", path, f.Name())
-	}
 	go w.Start(time.Millisecond * 100)
 }
 
@@ -88,6 +85,7 @@ func (app *App) loadTasks() {
 	app.state.Tasks = getTasksResult.Tasks
 	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
 
+	// guard out of bounds
 	if app.state.SelectedIndex >= len(app.state.Tasks) {
 		app.state.SelectedIndex = len(app.state.Tasks) - 1
 	}
@@ -296,7 +294,7 @@ func (app *App) Render() ui.Buffer {
 		AppState: &app.state,
 		Width:    app.Width(),
 	}
-	b.DrawComponent(0, 0, &header)
+	headerBuffer := b.DrawComponent(0, 0, &header)
 
 	taskList := components.TaskList{
 		Tasks:                app.state.Tasks,
@@ -305,6 +303,15 @@ func (app *App) Render() ui.Buffer {
 		SelectedIndex:        app.state.SelectedIndex,
 	}
 	b.DrawComponent(0, 4, &taskList)
+
+	// guard max scroll
+	maxScroll := len(app.state.Tasks) - app.Height() + headerBuffer.Height()
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if app.state.ScrollOffset > maxScroll {
+		app.state.ScrollOffset = maxScroll
+	}
 
 	return b
 }
