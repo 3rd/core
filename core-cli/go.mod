@@ -13,6 +13,7 @@ require (
 	github.com/3rd/go-futui v0.0.0-00010101000000-000000000000
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/joho/godotenv v1.5.1
+	github.com/radovskyb/watcher v1.0.7
 	github.com/spf13/cobra v1.8.1
 )
 

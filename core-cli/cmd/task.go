@@ -152,8 +152,13 @@ var taskInteractiveCommand = &cobra.Command{
 			}
 		}
 
+		getRoot := func() string {
+			return root
+		}
+
 		providers := taskinteractive.Providers{
 			GetTasks: loadTasks,
+			GetRoot:  getRoot,
 		}
 		taskinteractive.Run(providers)
 	},

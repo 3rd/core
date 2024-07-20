@@ -4,12 +4,15 @@ import (
 	"core/ui/task_interactive/components"
 	"core/ui/task_interactive/state"
 	"core/ui/task_interactive/theme"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/3rd/core/core-lib/wiki"
 	ui "github.com/3rd/go-futui"
 	"github.com/gdamore/tcell/v2"
+	"github.com/radovskyb/watcher"
 )
 
 type GetTasksResult struct {
@@ -17,6 +20,7 @@ type GetTasksResult struct {
 	LongestProjectLength int
 }
 type Providers struct {
+	GetRoot  func() string
 	GetTasks func() GetTasksResult
 }
 
@@ -46,6 +50,36 @@ func (app *App) Setup() {
 			}
 		}
 	}()
+
+	// watcher
+	w := watcher.New()
+	w.FilterOps(watcher.Create, watcher.Move, watcher.Remove, watcher.Write)
+
+	go func() {
+		for {
+			select {
+			case <-w.Event:
+				if app.state.Mode == state.APP_MODE_DEFAULT {
+					getTasksResult := app.providers.GetTasks()
+					app.state.Tasks = getTasksResult.Tasks
+					app.state.LongestProjectLength = getTasksResult.LongestProjectLength
+					app.Update()
+				}
+			case err := <-w.Error:
+				log.Fatalln(err)
+			case <-w.Closed:
+				return
+			}
+		}
+	}()
+
+	if err := w.AddRecursive(app.providers.GetRoot()); err != nil {
+		log.Fatalln(err)
+	}
+	for path, f := range w.WatchedFiles() {
+		fmt.Printf("%s: %s\n", path, f.Name())
+	}
+	go w.Start(time.Millisecond * 100)
 }
 
 func (app *App) navigateDown() {
