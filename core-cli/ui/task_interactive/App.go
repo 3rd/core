@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/3rd/core/core-lib/wiki"
+	localWiki "github.com/3rd/core/core-lib/wiki/local"
 	ui "github.com/3rd/go-futui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/radovskyb/watcher"
@@ -88,7 +90,7 @@ func (app *App) loadTasks() {
 	}
 }
 
-func (app *App) navigateDown() {
+func (app *App) handleNavigateDown() {
 	// select task
 	i := app.state.SelectedIndex
 	if i >= len(app.state.Tasks)-1 {
@@ -96,16 +98,15 @@ func (app *App) navigateDown() {
 	}
 	i = i + 1
 	app.state.SelectedIndex = i
-
 	// scroll
 	_, h := app.Screen.Size()
 	if i >= h-2+app.state.ScrollOffset {
 		app.state.ScrollOffset++
 	}
-
 	app.Update()
 }
-func (app *App) navigateUp() {
+
+func (app *App) handleNavigateUp() {
 	// select task
 	i := app.state.SelectedIndex
 	if i <= 0 {
@@ -113,12 +114,33 @@ func (app *App) navigateUp() {
 	}
 	i = i - 1
 	app.state.SelectedIndex = i
-
 	// scroll
 	if i < app.state.ScrollOffset {
 		app.state.ScrollOffset--
 	}
+	app.Update()
+}
 
+func (app *App) handleEdit() {
+	task := app.state.Tasks[app.state.SelectedIndex]
+	node := task.Node.(*localWiki.LocalNode)
+	if node == nil {
+		return
+	}
+
+	initialMode := app.state.Mode
+	app.state.Mode = state.APP_MODE_EDITOR
+
+	app.Screen.Suspend()
+	cmd := exec.Command("nvim", fmt.Sprintf("+%d", task.LineNumber+1), node.GetPath(), "+norm zz", "+norm zv")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	_ = cmd.Run()
+
+	app.Screen.Resume()
+	app.state.Mode = initialMode
+	app.loadTasks()
 	app.Update()
 }
 
@@ -129,12 +151,14 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 		case 'q':
 			app.Quit()
 		case 'j':
-			app.navigateDown()
+			app.handleNavigateDown()
 		case 'k':
-			app.navigateUp()
+			app.handleNavigateUp()
 		}
 	case tcell.KeyCtrlC:
 		app.Quit()
+	case tcell.KeyEnter:
+		app.handleEdit()
 	}
 	app.Update()
 }
