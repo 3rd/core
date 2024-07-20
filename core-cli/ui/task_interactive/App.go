@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/3rd/core/core-lib/wiki"
@@ -16,6 +17,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/radovskyb/watcher"
 )
+
+const INDENT = "  "
 
 type GetTasksResult struct {
 	Tasks                []*wiki.Task
@@ -144,6 +147,116 @@ func (app *App) handleEdit() {
 	app.Update()
 }
 
+func getIndentLevel(task *wiki.Task) int {
+	indentLevel := 0
+	lineText := task.LineText
+	for strings.HasPrefix(lineText, INDENT) {
+		indentLevel++
+		lineText = lineText[len(INDENT):]
+	}
+	return indentLevel
+}
+
+func (app *App) handleToggleActive() {
+	task := app.state.Tasks[app.state.SelectedIndex]
+	node := task.Node.(*localWiki.LocalNode)
+	now := time.Now()
+	text, err := node.Text()
+	if err != nil {
+		panic(err)
+	}
+	lines := strings.Split(text, "\n")
+
+	if task.IsInProgress() {
+		// end current session
+		lastWorkSession := task.GetLastWorkSession()
+		st := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", lastWorkSession.Start.Year(), lastWorkSession.Start.Month(), lastWorkSession.Start.Day(), lastWorkSession.Start.Hour(), lastWorkSession.Start.Minute(), now.Hour(), now.Minute())
+		for i := 0; i <= getIndentLevel(task); i++ {
+			st = INDENT + st
+		}
+		lines[lastWorkSession.LineNumber] = st
+	} else {
+		// start new session
+		st := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute())
+		for i := 0; i <= getIndentLevel(task); i++ {
+			st = INDENT + st
+		}
+		i := task.LineNumber + 1
+		lastWorkSession := task.GetLastWorkSession()
+		if lastWorkSession != nil {
+			i = lastWorkSession.LineNumber + 1
+		}
+		lines = append(lines, "")
+		copy(lines[i+1:], lines[i:])
+		lines[i] = st
+	}
+
+	out, err := os.Create(node.GetPath())
+	if err != nil {
+		panic(err)
+	}
+	defer out.Close()
+
+	_, err = out.WriteString(strings.Join(lines, "\n"))
+	if err != nil {
+		panic(err)
+	}
+
+	app.loadTasks()
+	app.Update()
+}
+
+func (app *App) handleToggleDone() {
+	task := app.state.Tasks[app.state.SelectedIndex]
+	node := task.Node.(*localWiki.LocalNode)
+	now := time.Now()
+	text, err := node.Text()
+	if err != nil {
+		panic(err)
+	}
+	textLines := strings.Split(text, "\n")
+
+	if task.Status == wiki.TASK_STATUS_DONE {
+		textLines[task.LineNumber] = strings.ReplaceAll(textLines[task.LineNumber], "[x]", "[-]")
+	} else {
+		textLines[task.LineNumber] = strings.ReplaceAll(textLines[task.LineNumber], "[-]", "[x]")
+	}
+
+	// active task
+	if task.IsInProgress() {
+		// end current session
+		lastWorkSession := task.GetLastWorkSession()
+		sessionText := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", lastWorkSession.Start.Year(), lastWorkSession.Start.Month(), lastWorkSession.Start.Day(), lastWorkSession.Start.Hour(), lastWorkSession.Start.Minute(), now.Hour(), now.Minute())
+		for i := 0; i <= getIndentLevel(task); i++ {
+			sessionText = INDENT + sessionText
+		}
+		textLines[lastWorkSession.LineNumber] = sessionText
+	}
+
+	// inactive task -> insert empty work session
+	if !task.IsInProgress() && len(task.Sessions) == 0 && task.Status != wiki.TASK_STATUS_DONE {
+		now := time.Now()
+		st := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Hour(), now.Minute())
+		for i := 0; i <= getIndentLevel(task); i++ {
+			st = INDENT + st
+		}
+		i := task.LineNumber + 1
+		textLines = append(textLines, "")
+		copy(textLines[i+1:], textLines[i:])
+		textLines[i] = st
+	}
+
+	out, err := os.Create(node.GetPath())
+	if err != nil {
+		panic(err)
+	}
+	defer out.Close()
+	out.WriteString(strings.Join(textLines, "\n"))
+
+	app.loadTasks()
+	app.Update()
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
 	switch ev.Key() {
 	case tcell.KeyRune:
@@ -154,11 +267,15 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			app.handleNavigateDown()
 		case 'k':
 			app.handleNavigateUp()
+		case ' ':
+			app.handleToggleActive()
 		}
 	case tcell.KeyCtrlC:
 		app.Quit()
 	case tcell.KeyEnter:
 		app.handleEdit()
+	case tcell.KeyCtrlSpace:
+		app.handleToggleDone()
 	}
 	app.Update()
 }

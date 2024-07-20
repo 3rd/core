@@ -54,7 +54,7 @@ func (c *TaskItem) Render() ui.Buffer {
 		rewardStyle.Foreground = projectStyle.Foreground
 	}
 
-	if c.Selected {
+	if c.Selected && !c.Task.IsInProgress() {
 		taskStyle.Background = theme.SELECTED_TASK_BG
 		taskStyle.Foreground = theme.SELECTED_TASK_FG
 		projectStyle.Background = taskStyle.Background.Darken(0.05)
