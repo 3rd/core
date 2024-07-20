@@ -31,9 +31,7 @@ type App struct {
 }
 
 func (app *App) Setup() {
-	getTasksResult := app.providers.GetTasks()
-	app.state.Tasks = getTasksResult.Tasks
-	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
+	app.loadTasks()
 
 	// redraw ticker
 	done := make(chan bool)
@@ -60,9 +58,7 @@ func (app *App) Setup() {
 			select {
 			case <-w.Event:
 				if app.state.Mode == state.APP_MODE_DEFAULT {
-					getTasksResult := app.providers.GetTasks()
-					app.state.Tasks = getTasksResult.Tasks
-					app.state.LongestProjectLength = getTasksResult.LongestProjectLength
+					app.loadTasks()
 					app.Update()
 				}
 			case err := <-w.Error:
@@ -80,6 +76,16 @@ func (app *App) Setup() {
 		fmt.Printf("%s: %s\n", path, f.Name())
 	}
 	go w.Start(time.Millisecond * 100)
+}
+
+func (app *App) loadTasks() {
+	getTasksResult := app.providers.GetTasks()
+	app.state.Tasks = getTasksResult.Tasks
+	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
+
+	if app.state.SelectedIndex >= len(app.state.Tasks) {
+		app.state.SelectedIndex = len(app.state.Tasks) - 1
+	}
 }
 
 func (app *App) navigateDown() {
