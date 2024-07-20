@@ -25,8 +25,7 @@ func (c *Header) Render() ui.Buffer {
 		bgStyle = ui.Style{Background: theme.HEADER_BG_FOCUSED, Foreground: theme.HEADER_FG_FOCUSED}
 	}
 	leftStyle := bgStyle
-	leftStyle.Background = leftStyle.Background.Darken(0.1)
-	leftStyle.Foreground = leftStyle.Foreground.Darken(0.1)
+	leftStyle.Background = leftStyle.Background.Darken(0.03)
 	rightStyle := leftStyle
 
 	// bg
@@ -95,14 +94,14 @@ func (c *Header) Render() ui.Buffer {
 	// right: points
 	rightRewardPoints := ui.Buffer{}
 	rightRewardPointsText := strconv.Itoa(totalRewardPoints)
-	rightRewardPoints.Text(0, 0, "", rightStyle)
+	rightRewardPoints.Text(0, 0, "", ui.Style{Foreground: theme.HEADER_REWARD_FG})
 	rightRewardPoints.Text(2, 0, rightRewardPointsText, rightStyle)
 
 	// draw right
 	right.DrawBuffer(1, 1, rightWorkTime)
 	right.Resize(right.Width()+1, right.Height())
-	right.DrawBuffer(right.Width()-rightRewardPoints.Width()-1, 2, rightRewardPoints)
 	right.ApplyStyle(rightStyle)
+	right.DrawBuffer(right.Width()-rightRewardPoints.Width()-1, 2, rightRewardPoints)
 
 	// draw left/right
 	b.DrawBuffer(0, 0, left)

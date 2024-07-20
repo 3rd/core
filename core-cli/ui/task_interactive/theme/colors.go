@@ -6,21 +6,28 @@ import (
 
 var (
 	// app
-	BG ui.Color = "#2E2442"
-	FG ui.Color = "#D9C7E6"
+	BG ui.Color = "#23212B"
+	FG ui.Color = "#C5C2D6"
 
 	// header
-	HEADER_BG         ui.Color = "#35294D"
-	HEADER_FG         ui.Color = HEADER_BG.OptimalForeground()
+	HEADER_BG         ui.Color = "#2C2A37"
+	HEADER_FG         ui.Color = "#C5C2D6"
 	HEADER_BG_FOCUSED ui.Color = "#633650"
 	HEADER_FG_FOCUSED ui.Color = HEADER_BG_FOCUSED.OptimalForeground()
+	HEADER_REWARD_FG  ui.Color = "#0aaf50"
 
 	// tasks
-	TASK_BG        ui.Color = "#503E74" // default
-	TASK_FG        ui.Color = TASK_BG.OptimalForeground()
-	TASK_ACTIVE_BG ui.Color = "#731F9B" // active
-	TASK_ACTIVE_FG ui.Color = TASK_ACTIVE_BG.OptimalForeground()
-	TASK_STICKY_BG ui.Color = "#813160" // sticky
-	TASK_STICKY_FG ui.Color = TASK_STICKY_BG.OptimalForeground()
-	PROJECT_FG     ui.Color = "#E8AB0F" // project
+	TASK_BG          ui.Color = "#4B475C"
+	TASK_FG          ui.Color = "#C5C2D6"
+	TASK_DONE_BG     ui.Color = "#383545"
+	TASK_DONE_FG     ui.Color = "#86819C"
+	TASK_ACTIVE_BG   ui.Color = "#731F9B"
+	TASK_ACTIVE_FG   ui.Color = TASK_ACTIVE_BG.OptimalForeground()
+	TASK_STICKY_BG   ui.Color = "#813160"
+	TASK_STICKY_FG   ui.Color = TASK_STICKY_BG.OptimalForeground()
+	TASK_REWARD_FG   ui.Color = "#ffaa00"
+	SELECTED_TASK_BG ui.Color = "#38565b"
+	SELECTED_TASK_FG ui.Color = "#a9dde6"
+	PROJECT_FG       ui.Color = "#E8AB0F"
+	PROJECT_DONE_FG  ui.Color = "#5E5A72"
 )

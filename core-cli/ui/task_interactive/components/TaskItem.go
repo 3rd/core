@@ -29,7 +29,7 @@ func (c *TaskItem) Render() ui.Buffer {
 	// styles
 	taskStyle := ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG}
 	projectStyle := taskStyle
-	rewardStyle := ui.Style{Foreground: "#ffaa00"}
+	rewardStyle := ui.Style{Foreground: theme.TASK_REWARD_FG}
 	projectStyle.Background = taskStyle.Background.Darken(0.05)
 	projectStyle.Foreground = theme.PROJECT_FG
 
@@ -45,20 +45,21 @@ func (c *TaskItem) Render() ui.Buffer {
 		taskStyle.Foreground = theme.TASK_ACTIVE_FG
 		projectStyle.Background = taskStyle.Background.Darken(0.05)
 		projectStyle.Foreground = projectStyle.Foreground.Lighten(0.1)
-		rewardStyle.Foreground = taskStyle.Foreground.Desaturate(0.5).Lighten(0.1)
+		rewardStyle.Foreground = projectStyle.Foreground
 	} else if c.Task.Status == wiki.TASK_STATUS_DONE {
-		taskStyle.Background = taskStyle.Background.Darken(0.05)
-		taskStyle.Foreground = taskStyle.Foreground.Darken(0.5)
+		taskStyle.Background = theme.TASK_DONE_BG
+		taskStyle.Foreground = theme.TASK_DONE_FG
 		projectStyle.Background = taskStyle.Background.Darken(0.05)
-		projectStyle.Foreground = projectStyle.Foreground.Desaturate(1).Darken(0.1)
-		rewardStyle.Foreground = rewardStyle.Foreground.Desaturate(1).Darken(0.1)
+		projectStyle.Foreground = theme.PROJECT_DONE_FG
+		rewardStyle.Foreground = projectStyle.Foreground
 	}
 
 	if c.Selected {
-		taskStyle.Background = taskStyle.Background.Lighten(0.15)
-		taskStyle.Foreground = taskStyle.Background.OptimalForeground()
-		projectStyle.Background = projectStyle.Background.Lighten(0.1)
-		projectStyle.Foreground = projectStyle.Foreground.Lighten(0.1)
+		taskStyle.Background = theme.SELECTED_TASK_BG
+		taskStyle.Foreground = theme.SELECTED_TASK_FG
+		projectStyle.Background = taskStyle.Background.Darken(0.05)
+		projectStyle.Foreground = taskStyle.Foreground
+		rewardStyle.Foreground = taskStyle.Foreground
 	}
 
 	checkmarkStyle := taskStyle
