@@ -119,17 +119,19 @@ func (n *LocalNode) GetTasks() []*wiki.Task {
 		sessions := []wiki.TaskSession{}
 		for _, session := range syslangTask.Sessions {
 			sessions = append(sessions, wiki.TaskSession{
-				Start: session.Start,
-				End:   session.End,
+				Start:      session.Start,
+				End:        session.End,
+				LineNumber: session.Line,
 			})
 		}
 
 		var schedule *wiki.TaskSchedule
 		if syslangTask.Schedule != nil {
 			schedule = &wiki.TaskSchedule{
-				Start:  syslangTask.Schedule.Start,
-				End:    syslangTask.Schedule.End,
-				Repeat: syslangTask.Schedule.Repeat,
+				Start:      syslangTask.Schedule.Start,
+				End:        syslangTask.Schedule.End,
+				Repeat:     syslangTask.Schedule.Repeat,
+				LineNumber: syslangTask.Schedule.Line,
 			}
 		}
 
@@ -148,6 +150,7 @@ func (n *LocalNode) GetTasks() []*wiki.Task {
 			Schedule:    schedule,
 			Text:        syslangTask.Title,
 			LineNumber:  syslangTask.Line,
+			LineText:    syslangTask.LineText,
 			Status:      wiki.TASK_STATUS_DEFAULT,
 			Completions: completions,
 			Priority:    syslangTask.Priority,

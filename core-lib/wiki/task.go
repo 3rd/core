@@ -21,8 +21,9 @@ const (
 )
 
 type TaskSession struct {
-	Start time.Time
-	End   *time.Time
+	Start      time.Time
+	End        *time.Time
+	LineNumber uint32
 }
 
 func (session TaskSession) Duration() time.Duration {
@@ -43,9 +44,10 @@ func (session TaskSession) IsInProgress(atTime ...time.Time) bool {
 }
 
 type TaskSchedule struct {
-	Start  time.Time
-	End    *time.Time
-	Repeat string
+	Start      time.Time
+	End        *time.Time
+	Repeat     string
+	LineNumber uint32
 }
 
 func (schedule TaskSchedule) Duration() time.Duration {
@@ -87,6 +89,7 @@ type Task struct {
 	Completions []TaskCompletion
 	Text        string
 	LineNumber  uint32
+	LineText    string
 	Status      TASK_STATUS
 	Priority    uint32
 	DetailLines []string
