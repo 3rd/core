@@ -17,7 +17,8 @@ dev: ## watch for changes and run tests
 .PHONY: dev
 
 dev-task-interactive: ## dev: task interactive
-	watchexec --stop-timeout=0 --no-process-group --stop-signal SIGKILL -e go -r -c clear -w . -- "go run . task interactive"
+	# https://github.com/watchexec/watchexec/issues/655
+	watchexec --no-process-group -r -e go -w . --shell=bash 'go build . && { ./core task interactive & child_pid=$$!; trap "kill -TERM $$child_pid" EXIT; wait $$child_pid; }'
 .PHONY: dev
 
 test: ## run tests
