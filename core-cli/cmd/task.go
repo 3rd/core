@@ -140,7 +140,7 @@ var taskInteractiveCommand = &cobra.Command{
 				// by location
 				aNode := a.Node.(*localWiki.LocalNode)
 				bNode := b.Node.(*localWiki.LocalNode)
-				if aNode.GetPath() != bNode.GetPath() {
+				if aNode.GetPath() == bNode.GetPath() {
 					return a.LineNumber < b.LineNumber
 				}
 				return a.Text < b.Text
