@@ -32,8 +32,51 @@ func (app *App) Setup() {
 	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
 }
 
+func (app *App) navigateDown() {
+	// select task
+	i := app.state.SelectedIndex
+	if i >= len(app.state.Tasks)-1 {
+		return
+	}
+	i = i + 1
+	app.state.SelectedIndex = i
+
+	// scroll
+	_, h := app.Screen.Size()
+	if i >= h-2+app.state.ScrollOffset {
+		app.state.ScrollOffset++
+	}
+
+	app.Update()
+}
+func (app *App) navigateUp() {
+	// select task
+	i := app.state.SelectedIndex
+	if i <= 0 {
+		return
+	}
+	i = i - 1
+	app.state.SelectedIndex = i
+
+	// scroll
+	if i < app.state.ScrollOffset {
+		app.state.ScrollOffset--
+	}
+
+	app.Update()
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
 	switch ev.Key() {
+	case tcell.KeyRune:
+		switch ev.Rune() {
+		case 'q':
+			app.Quit()
+		case 'j':
+			app.navigateDown()
+		case 'k':
+			app.navigateUp()
+		}
 	case tcell.KeyCtrlC:
 		app.Quit()
 	}
@@ -62,6 +105,7 @@ func (app *App) Render() ui.Buffer {
 		Tasks:                app.state.Tasks,
 		Width:                app.Width(),
 		LongestProjectLength: app.state.LongestProjectLength,
+		SelectedIndex:        app.state.SelectedIndex,
 	}
 	b.DrawComponent(0, 4, &taskList)
 

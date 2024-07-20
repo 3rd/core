@@ -14,6 +14,8 @@ type AppState struct {
 	Mode                 APP_MODE
 	Tasks                []*wiki.Task
 	LongestProjectLength int
+	SelectedIndex        int
+	ScrollOffset         int
 }
 
 func (app *AppState) GetLongestTaskLength() int {
