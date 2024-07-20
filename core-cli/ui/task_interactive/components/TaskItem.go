@@ -2,6 +2,7 @@ package components
 
 import (
 	"core/ui/task_interactive/theme"
+	"strconv"
 	"time"
 
 	"github.com/3rd/core/core-lib/wiki"
@@ -20,6 +21,11 @@ func (c *TaskItem) Render() ui.Buffer {
 	b := ui.Buffer{}
 	hoffset := 0
 
+	taskReward := c.Task.Priority
+	if taskReward == 0 {
+		taskReward = 1
+	}
+
 	// styles
 	taskStyle := ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG}
 	projectStyle := taskStyle
@@ -27,12 +33,11 @@ func (c *TaskItem) Render() ui.Buffer {
 	projectStyle.Background = taskStyle.Background.Darken(0.05)
 	projectStyle.Foreground = theme.PROJECT_FG
 
-	if c.Task.Status == wiki.TASK_STATUS_DONE {
-		taskStyle.Background = taskStyle.Background.Darken(0.05)
-		taskStyle.Foreground = taskStyle.Foreground.Darken(0.5)
-		projectStyle.Background = taskStyle.Background.Darken(0.05)
-		projectStyle.Foreground = projectStyle.Foreground.Desaturate(1).Darken(0.1)
-		rewardStyle.Foreground = rewardStyle.Foreground.Desaturate(1).Darken(0.1)
+	if taskReward >= 100 {
+		taskStyle.Background = theme.TASK_STICKY_BG
+		taskStyle.Foreground = theme.TASK_STICKY_FG
+		projectStyle.Background = theme.TASK_STICKY_BG
+		projectStyle.Foreground = theme.TASK_ACTIVE_FG
 	}
 
 	if c.Task.IsInProgress() {
@@ -41,6 +46,12 @@ func (c *TaskItem) Render() ui.Buffer {
 		projectStyle.Background = taskStyle.Background.Darken(0.05)
 		projectStyle.Foreground = projectStyle.Foreground.Lighten(0.1)
 		rewardStyle.Foreground = taskStyle.Foreground.Desaturate(0.5).Lighten(0.1)
+	} else if c.Task.Status == wiki.TASK_STATUS_DONE {
+		taskStyle.Background = taskStyle.Background.Darken(0.05)
+		taskStyle.Foreground = taskStyle.Foreground.Darken(0.5)
+		projectStyle.Background = taskStyle.Background.Darken(0.05)
+		projectStyle.Foreground = projectStyle.Foreground.Desaturate(1).Darken(0.1)
+		rewardStyle.Foreground = rewardStyle.Foreground.Desaturate(1).Darken(0.1)
 	}
 
 	if c.Selected {
@@ -86,13 +97,21 @@ func (c *TaskItem) Render() ui.Buffer {
 	text.Text(0, 0, c.Task.Text, textStyle)
 	b.DrawBuffer(hoffset, 0, text)
 
+	// reward
+	reward := ui.Buffer{}
+	rewardIcon := ui.Buffer{}
+	rewardIcon.Text(0, 0, "", rewardStyle)
+	reward.DrawBuffer(0, 0, rewardIcon)
+	reward.Text(2, 0, strconv.Itoa(int(taskReward)), rewardStyle)
+	b.DrawBuffer(c.Width-reward.Width()-1, 0, reward)
+
 	// duration
 	workTime := c.Task.GetWorkTime()
 	if workTime > 0 {
 		duration := ui.Buffer{}
 		durationText := c.Task.GetWorkTime().Round(time.Second).String()
 		duration.Text(0, 0, durationText, taskStyle)
-		b.DrawBuffer(c.Width-duration.Width()-2, 0, duration)
+		b.DrawBuffer(c.Width-duration.Width()-reward.Width()-2, 0, duration)
 	}
 
 	return b

@@ -4,6 +4,7 @@ import (
 	state "core/ui/task_interactive/state"
 	"core/ui/task_interactive/theme"
 	"fmt"
+	"strconv"
 	"time"
 
 	ui "github.com/3rd/go-futui"
@@ -36,7 +37,7 @@ func (c *Header) Render() ui.Buffer {
 	left := ui.Buffer{}
 	left.Resize(1, 4)
 
-	// left label
+	// left: label
 	leftLabel := ui.Buffer{}
 	text := ""
 	leftLabel.Text(0, 0, text, leftStyle)
@@ -47,7 +48,7 @@ func (c *Header) Render() ui.Buffer {
 	text = fmt.Sprintf("%d", c.AppState.GetDoneTasksCount())
 	leftLabel.Text(leftLabel.Width()+1, 0, text, leftStyle)
 
-	// left bar
+	// left: bar
 	leftBar := ui.Buffer{}
 	barWidth := leftLabel.Width()
 	min := c.AppState.LongestProjectLength + 3
@@ -55,15 +56,13 @@ func (c *Header) Render() ui.Buffer {
 	if barWidth < min {
 		barWidth = min
 	}
-
-	var point = float64(barWidth) * (float64(c.AppState.GetDoneTasksCount()) / (float64(c.AppState.GetDoneTasksCount()) + float64(c.AppState.GetNotDoneTasksCount())))
+	var midPoint = float64(barWidth) * (float64(c.AppState.GetDoneTasksCount()) / (float64(c.AppState.GetDoneTasksCount()) + float64(c.AppState.GetNotDoneTasksCount())))
 
 	for i := 0; i < barWidth; i++ {
 		ch := "▭"
-		if float64(i) < point {
+		if float64(i) < midPoint {
 			ch = "▬"
 		}
-
 		leftBar.Text(i, 0, ch, leftStyle)
 	}
 
@@ -76,19 +75,36 @@ func (c *Header) Render() ui.Buffer {
 	right := ui.Buffer{}
 	right.Resize(1, 4)
 
-	dayTime := time.Duration(0)
+	// compute total work time and reward points
+	totalWorkTime := time.Duration(0)
+	totalRewardPoints := 0
 	for _, t := range c.AppState.Tasks {
-		dayTime += t.GetWorkTime()
+		totalWorkTime += t.GetWorkTime()
+		taskReward := t.Priority
+		if taskReward == 0 {
+			taskReward = 1
+		}
+		totalRewardPoints += int(taskReward)
 	}
 
-	rightTime := ui.Buffer{}
-	rightText := dayTime.Round(time.Second).String()
-	rightTime.Text(0, 0, rightText, rightStyle)
+	// right: work time
+	rightWorkTime := ui.Buffer{}
+	rightWorkTimeText := totalWorkTime.Round(time.Second).String()
+	rightWorkTime.Text(0, 0, rightWorkTimeText, rightStyle)
 
-	right.DrawBuffer(1, 1, rightTime)
+	// right: points
+	rightRewardPoints := ui.Buffer{}
+	rightRewardPointsText := strconv.Itoa(totalRewardPoints)
+	rightRewardPoints.Text(0, 0, "", rightStyle)
+	rightRewardPoints.Text(2, 0, rightRewardPointsText, rightStyle)
+
+	// draw right
+	right.DrawBuffer(1, 1, rightWorkTime)
 	right.Resize(right.Width()+1, right.Height())
+	right.DrawBuffer(right.Width()-rightRewardPoints.Width()-1, 2, rightRewardPoints)
 	right.ApplyStyle(rightStyle)
 
+	// draw left/right
 	b.DrawBuffer(0, 0, left)
 	rightX := c.Width - right.Width()
 	if rightX < 0 {
@@ -96,7 +112,7 @@ func (c *Header) Render() ui.Buffer {
 	}
 	b.DrawBuffer(rightX, 0, right)
 
-	// center
+	// draw center
 	if c.AppState.Mode == state.APP_MODE_FOCUS {
 		center := ui.Buffer{}
 		center.Resize(c.Width-left.Width()-right.Width(), 4)

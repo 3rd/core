@@ -150,6 +150,7 @@ func (n *LocalNode) GetTasks() []*wiki.Task {
 			LineNumber:  syslangTask.Line,
 			Status:      wiki.TASK_STATUS_DEFAULT,
 			Completions: completions,
+			Priority:    syslangTask.Priority,
 		}
 		if syslangTask.Status == syslang.TaskStatusActive {
 			task.Status = wiki.TASK_STATUS_ACTIVE
