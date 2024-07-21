@@ -4,12 +4,45 @@ import (
 	taskinteractive "core/ui/task_interactive"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/3rd/core/core-lib/wiki"
 	localWiki "github.com/3rd/core/core-lib/wiki/local"
 	"github.com/spf13/cobra"
 )
+
+func preprocessScheduleRepeat(input string) string {
+	switch input {
+	case "day":
+		return "mon,tue,wed,thu,fri,sat,sun"
+	case "week":
+		return "mon,tue,wed,thu,fri,sat,sun"
+	case "workday":
+		return "mon,tue,wed,thu,fri"
+	}
+	return input
+}
+
+func formatRepeatDayStr(input string) string {
+	switch input {
+	case "mon":
+		return "Monday"
+	case "tue":
+		return "Tuesday"
+	case "wed":
+		return "Wednesday"
+	case "thu":
+		return "Thursday"
+	case "fri":
+		return "Friday"
+	case "sat":
+		return "Saturday"
+	case "sun":
+		return "Sunday"
+	}
+	return input
+}
 
 var taskCurrentCommand = &cobra.Command{
 	Use:   "current",
@@ -38,7 +71,7 @@ var taskCurrentCommand = &cobra.Command{
 			for _, task := range tasks {
 				if task.IsInProgress() {
 					if cmd.Flag("elapsed").Value != nil {
-						start := task.GetLastWorkSession().Start
+						start := task.GetLastSession().Start
 						elapsed := time.Since(start).Round(time.Second)
 						fmt.Printf("%s - %s (%s)\n", node.GetName(), task.Text, elapsed)
 					} else {
@@ -78,27 +111,103 @@ var taskInteractiveCommand = &cobra.Command{
 			}
 
 			// load tasks
-			recentlyDoneLimit, _ := time.ParseDuration("24h")
 			tasks := []*wiki.Task{}
 			longestProjectLength := 0
+
+			recentlyDoneOffset, _ := time.ParseDuration("24h")
 			now := time.Now()
+			startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+			if recentlyDoneOffset > 0 {
+				startOfDay = startOfDay.Add(-recentlyDoneOffset)
+			}
+			endOfDay := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.Local)
 
 			for _, node := range nodes {
 				nodeTasks := node.GetTasks()
 				hasAddedTaskForNode := false
 
 				for _, task := range nodeTasks {
-					if task.Status == wiki.TASK_STATUS_ACTIVE || task.IsInProgress() {
-						tasks = append(tasks, task)
-						hasAddedTaskForNode = true
-					} else if task.Status == wiki.TASK_STATUS_DONE {
-						last_session := task.GetLastWorkSession()
-						if last_session != nil && now.Sub(last_session.Start) < recentlyDoneLimit {
-							// todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
-							// if last_session != nil && last_session.Start.After(todayStart) {
-							tasks = append(tasks, task)
-							hasAddedTaskForNode = true
+					var taskToAdd *wiki.Task
+
+					// skip cancelled
+					if task.Status == wiki.TASK_STATUS_CANCELLED {
+						continue
+					}
+
+					// active
+					if task.Status == wiki.TASK_STATUS_ACTIVE {
+						taskToAdd = task
+					}
+
+					// done today
+					if taskToAdd == nil && task.Status == wiki.TASK_STATUS_DONE {
+						for _, session := range task.Sessions {
+							if session.Start.After(startOfDay) && session.Start.Before(endOfDay) {
+								taskToAdd = task
+								break
+							}
 						}
+					}
+
+					// scheduled for today
+					if taskToAdd == nil && task.Status == wiki.TASK_STATUS_DEFAULT && task.Schedule != nil {
+						if task.Schedule.Start.After(startOfDay) && task.Schedule.Start.Before(endOfDay) {
+							taskToAdd = task
+						}
+					}
+
+					// scheduled in the past, not completed, without recurrence
+					if taskToAdd == nil && task.Status != wiki.TASK_STATUS_DONE && task.Schedule != nil && task.Schedule.Repeat == "" {
+						if task.Schedule.Start.Before(startOfDay) {
+							taskToAdd = task
+						}
+					}
+
+					// with a recurring schedule that is due today
+					if taskToAdd == nil && task.Status != wiki.TASK_STATUS_DONE && task.Schedule != nil && task.Schedule.Repeat != "" {
+						isShortNotation := false
+
+						// @daily
+						if task.Schedule.Repeat == "daily" {
+							isShortNotation = true
+							taskToAdd = task
+						}
+						// @weekly
+						if task.Schedule.Repeat == "weekly" {
+							isShortNotation = true
+							scheduledDay := task.Schedule.Start.Weekday()
+							if scheduledDay == now.Weekday() {
+								taskToAdd = task
+							}
+						}
+						// @monthly
+						if task.Schedule.Repeat == "monthly" {
+							isShortNotation = true
+							scheduledDay := task.Schedule.Start.Day()
+							if scheduledDay == now.Day() {
+								taskToAdd = task
+							}
+						}
+
+						// mon, tue, wed, thu, fri, sat, sun
+						if !isShortNotation {
+							parts := strings.Split(preprocessScheduleRepeat(task.Schedule.Repeat), ",")
+							for _, part := range parts {
+								if formatRepeatDayStr(part) == now.Weekday().String() {
+									taskToAdd = task
+								}
+							}
+						}
+					}
+
+					if taskToAdd != nil {
+						// patch completion
+						if task.HasCompletionForDate(now) {
+							task.Status = wiki.TASK_STATUS_DONE
+						}
+
+						tasks = append(tasks, taskToAdd)
+						hasAddedTaskForNode = true
 					}
 				}
 

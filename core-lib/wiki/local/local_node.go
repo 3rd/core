@@ -138,7 +138,8 @@ func (n *LocalNode) GetTasks() []*wiki.Task {
 		completions := []wiki.TaskCompletion{}
 		for _, completion := range syslangTask.Completions {
 			completions = append(completions, wiki.TaskCompletion{
-				Timestamp: completion.Start,
+				Timestamp:  completion.Start,
+				LineNumber: completion.Line,
 			})
 		}
 

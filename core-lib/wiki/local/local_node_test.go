@@ -85,7 +85,7 @@ func TestLocalNode(t *testing.T) {
 		assert.Equal(t, uint32(4), tasks[2].LineNumber)
 		assert.Equal(t, uint32(0), tasks[2].Priority)
 		assert.Equal(t, 1, len(tasks[2].Sessions))
-		assert.NotNil(t, tasks[2].GetLastWorkSession())
+		assert.NotNil(t, tasks[2].GetLastSession())
 
 		// [ ] task 3 Schedule: 2024.01.01 10:00
 		assert.Equal(t, "task 3", tasks[3].Text)

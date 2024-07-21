@@ -77,7 +77,8 @@ func (schedule TaskSchedule) IsInProgress(atTime ...time.Time) bool {
 }
 
 type TaskCompletion struct {
-	Timestamp time.Time
+	Timestamp  time.Time
+	LineNumber uint32
 }
 
 type Task struct {
@@ -108,13 +109,13 @@ func (t *Task) IsInProgress() bool {
 		}
 	}
 	// scheduled and inside the scheduled interval now
-	if t.Schedule == nil {
+	if t.Schedule == nil || t.Schedule.Repeat != "" {
 		return false
 	}
 	return t.Schedule.IsInProgress(time.Now())
 }
 
-func (t *Task) GetWorkTime() time.Duration {
+func (t *Task) GetTotalSessionTime() time.Duration {
 	duration := time.Duration(0)
 	for _, session := range t.Sessions {
 		duration += session.Duration()
@@ -122,10 +123,10 @@ func (t *Task) GetWorkTime() time.Duration {
 	return duration
 }
 
-func (t *Task) GetTotalWorkTime() time.Duration {
-	duration := time.Duration(0)
+func (t *Task) GetTotalSessionTimeDeep() time.Duration {
+	duration := t.GetTotalSessionTime()
 	for _, child := range t.Children {
-		duration += child.GetTotalWorkTime()
+		duration += child.GetTotalSessionTimeDeep()
 	}
 	return duration
 }
@@ -138,11 +139,32 @@ func (t *Task) GetTotalPriority() uint32 {
 	return priority
 }
 
-func (t *Task) GetLastWorkSession() *TaskSession {
+func (t *Task) GetLastSession() *TaskSession {
 	if len(t.Sessions) == 0 {
 		return nil
 	}
 	last := t.Sessions[len(t.Sessions)-1]
+	return &last
+}
+
+func (t *Task) GetCompletionForDate(date time.Time) *TaskCompletion {
+	for _, completion := range t.Completions {
+		if completion.Timestamp.Year() == date.Year() && completion.Timestamp.Month() == date.Month() && completion.Timestamp.Day() == date.Day() {
+			return &completion
+		}
+	}
+	return nil
+}
+
+func (t *Task) HasCompletionForDate(date time.Time) bool {
+	return t.GetCompletionForDate(date) != nil
+}
+
+func (t *Task) GetLastCompletion() *TaskCompletion {
+	if len(t.Completions) == 0 {
+		return nil
+	}
+	last := t.Completions[len(t.Completions)-1]
 	return &last
 }
 

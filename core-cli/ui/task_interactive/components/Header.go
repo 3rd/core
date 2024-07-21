@@ -78,7 +78,7 @@ func (c *Header) Render() ui.Buffer {
 	totalWorkTime := time.Duration(0)
 	totalRewardPoints := 0
 	for _, t := range c.AppState.Tasks {
-		totalWorkTime += t.GetWorkTime()
+		totalWorkTime += t.GetTotalSessionTime()
 		taskReward := t.Priority
 		if taskReward == 0 {
 			taskReward = 1

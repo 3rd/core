@@ -167,7 +167,7 @@ func (app *App) handleToggleInProgress() {
 
 	if task.IsInProgress() {
 		// end current session
-		lastWorkSession := task.GetLastWorkSession()
+		lastWorkSession := task.GetLastSession()
 		st := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", lastWorkSession.Start.Year(), lastWorkSession.Start.Month(), lastWorkSession.Start.Day(), lastWorkSession.Start.Hour(), lastWorkSession.Start.Minute(), now.Hour(), now.Minute())
 		for i := 0; i <= getIndentLevel(task); i++ {
 			st = INDENT + st
@@ -180,9 +180,11 @@ func (app *App) handleToggleInProgress() {
 			st = INDENT + st
 		}
 		i := task.LineNumber + 1
-		lastWorkSession := task.GetLastWorkSession()
+		lastWorkSession := task.GetLastSession()
 		if lastWorkSession != nil {
 			i = lastWorkSession.LineNumber + 1
+		} else if task.Schedule != nil {
+			i = task.Schedule.LineNumber + 1
 		}
 		lines = append(lines, "")
 		copy(lines[i+1:], lines[i:])
@@ -212,36 +214,95 @@ func (app *App) handleToggleDone() {
 	if err != nil {
 		panic(err)
 	}
-	textLines := strings.Split(text, "\n")
+	lines := strings.Split(text, "\n")
 
-	if task.Status == wiki.TASK_STATUS_DONE {
-		textLines[task.LineNumber] = strings.ReplaceAll(textLines[task.LineNumber], "[x]", "[-]")
+	// recurring tasks
+	if task.Schedule != nil && task.Schedule.Repeat != "" {
+		completion := task.GetCompletionForDate(time.Now())
+
+		// remove completion
+		if completion != nil {
+			lines = append(lines[:completion.LineNumber], lines[completion.LineNumber+1:]...)
+		} else {
+			// add completion
+			now := time.Now()
+			st := fmt.Sprintf("Done: %04d.%02d.%02d %02d:%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute())
+			for i := 0; i <= getIndentLevel(task); i++ {
+				st = INDENT + st
+			}
+			i := task.Schedule.LineNumber + 1
+			lastCompletion := task.GetLastCompletion()
+			if lastCompletion != nil {
+				i = lastCompletion.LineNumber + 1
+			} else {
+				lastSession := task.GetLastSession()
+				if lastSession != nil {
+					i = lastSession.LineNumber + 1
+				}
+			}
+			lines = append(lines, "")
+			copy(lines[i+1:], lines[i:])
+			lines[i] = st
+
+			// session in-progress task -> end current session
+			if task.IsInProgress() {
+				now := time.Now()
+				// end current session
+				last := *task.GetLastSession()
+				sessionText := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", last.Start.Year(), last.Start.Month(), last.Start.Day(), last.Start.Hour(), last.Start.Minute(), now.Hour(), now.Minute())
+				for i := 0; i <= getIndentLevel(task); i++ {
+					sessionText = INDENT + sessionText
+				}
+				lines[last.LineNumber] = sessionText
+			}
+		}
 	} else {
-		textLines[task.LineNumber] = strings.ReplaceAll(textLines[task.LineNumber], "[-]", "[x]")
-	}
+		// non-recurring tasks
 
-	// current task
-	if task.IsInProgress() {
-		// end current session
-		lastWorkSession := task.GetLastWorkSession()
-		sessionText := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", lastWorkSession.Start.Year(), lastWorkSession.Start.Month(), lastWorkSession.Start.Day(), lastWorkSession.Start.Hour(), lastWorkSession.Start.Minute(), now.Hour(), now.Minute())
-		for i := 0; i <= getIndentLevel(task); i++ {
-			sessionText = INDENT + sessionText
+		// marker (no schedule): [x] -> [-] or [-] -> [x]
+		if task.Schedule == nil {
+			if task.Status == wiki.TASK_STATUS_DONE {
+				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[x]", "[-]")
+			} else {
+				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[-]", "[x]")
+			}
 		}
-		textLines[lastWorkSession.LineNumber] = sessionText
-	}
 
-	// inactive task -> insert empty work session
-	if !task.IsInProgress() && len(task.Sessions) == 0 && task.Status != wiki.TASK_STATUS_DONE {
-		now := time.Now()
-		st := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Hour(), now.Minute())
-		for i := 0; i <= getIndentLevel(task); i++ {
-			st = INDENT + st
+		// marker (scheduled): [x | -] <-> [ ]
+		if task.Schedule != nil {
+			switch task.Status {
+			case wiki.TASK_STATUS_DONE:
+				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[x]", "[ ]")
+			case wiki.TASK_STATUS_DEFAULT:
+				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[ ]", "[x]")
+			case wiki.TASK_STATUS_ACTIVE:
+				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[-]", "[x]")
+			}
 		}
-		i := task.LineNumber + 1
-		textLines = append(textLines, "")
-		copy(textLines[i+1:], textLines[i:])
-		textLines[i] = st
+
+		// current task
+		if task.IsInProgress() {
+			// end current session
+			lastWorkSession := task.GetLastSession()
+			sessionText := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", lastWorkSession.Start.Year(), lastWorkSession.Start.Month(), lastWorkSession.Start.Day(), lastWorkSession.Start.Hour(), lastWorkSession.Start.Minute(), now.Hour(), now.Minute())
+			for i := 0; i <= getIndentLevel(task); i++ {
+				sessionText = INDENT + sessionText
+			}
+			lines[lastWorkSession.LineNumber] = sessionText
+		}
+
+		// inactive task -> insert empty work session
+		if !task.IsInProgress() && len(task.Sessions) == 0 && task.Status != wiki.TASK_STATUS_DONE {
+			now := time.Now()
+			st := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d-%02d:%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Hour(), now.Minute())
+			for i := 0; i <= getIndentLevel(task); i++ {
+				st = INDENT + st
+			}
+			i := task.LineNumber + 1
+			lines = append(lines, "")
+			copy(lines[i+1:], lines[i:])
+			lines[i] = st
+		}
 	}
 
 	out, err := os.Create(node.GetPath())
@@ -249,7 +310,7 @@ func (app *App) handleToggleDone() {
 		panic(err)
 	}
 	defer out.Close()
-	out.WriteString(strings.Join(textLines, "\n"))
+	out.WriteString(strings.Join(lines, "\n"))
 
 	app.loadTasks()
 	app.Update()
