@@ -67,6 +67,12 @@ var taskCurrentCommand = &cobra.Command{
 		}
 
 		for _, node := range nodes {
+			meta := node.GetMeta()
+			nodeType, ok := meta["type"]
+			if !ok || nodeType != "project" {
+				continue
+			}
+
 			tasks := node.GetTasks()
 			for _, task := range tasks {
 				if task.IsInProgress() {
@@ -123,6 +129,12 @@ var taskInteractiveCommand = &cobra.Command{
 			endOfDay := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.Local)
 
 			for _, node := range nodes {
+				meta := node.GetMeta()
+				nodeType, ok := meta["type"]
+				if !ok || nodeType != "project" {
+					continue
+				}
+
 				nodeTasks := node.GetTasks()
 				hasAddedTaskForNode := false
 

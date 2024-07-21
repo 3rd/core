@@ -54,6 +54,10 @@ func (n *LocalNode) GetName() string {
 	return n.File.GetName()
 }
 
+func (n *LocalNode) GetMeta() map[string]string {
+	return n.document.GetMeta()
+}
+
 func (n *LocalNode) GetContent() (string, error) {
 	return n.Text()
 }
