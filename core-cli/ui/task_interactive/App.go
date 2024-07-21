@@ -155,7 +155,7 @@ func getIndentLevel(task *wiki.Task) int {
 	return indentLevel
 }
 
-func (app *App) handleToggleActive() {
+func (app *App) handleToggleInProgress() {
 	task := app.state.Tasks[app.state.SelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	now := time.Now()
@@ -220,7 +220,7 @@ func (app *App) handleToggleDone() {
 		textLines[task.LineNumber] = strings.ReplaceAll(textLines[task.LineNumber], "[-]", "[x]")
 	}
 
-	// active task
+	// current task
 	if task.IsInProgress() {
 		// end current session
 		lastWorkSession := task.GetLastWorkSession()
@@ -255,6 +255,29 @@ func (app *App) handleToggleDone() {
 	app.Update()
 }
 
+func (app *App) handleDeactivateTask() {
+	if len(app.state.Tasks) == 0 {
+		return
+	}
+
+	task := app.state.Tasks[app.state.SelectedIndex]
+	node := task.Node.(*localWiki.LocalNode)
+	text, _ := node.Text()
+	lines := strings.Split(string(text), "\n")
+
+	updatedLineText := strings.Replace(task.LineText, "[-]", "[ ]", 1)
+	lines[task.LineNumber] = updatedLineText
+
+	out, err := os.Create(node.GetPath())
+	if err != nil {
+		panic(err)
+	}
+	defer out.Close()
+	out.WriteString(strings.Join(lines, "\n"))
+
+	app.Update()
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
 	switch ev.Key() {
 	case tcell.KeyRune:
@@ -266,10 +289,10 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 		case 'k':
 			app.handleNavigateUp()
 		case ' ':
-			app.handleToggleActive()
+			app.handleToggleInProgress()
 		}
 	case tcell.KeyCtrlC:
-		app.Quit()
+		app.handleDeactivateTask()
 	case tcell.KeyEnter:
 		app.handleEdit()
 	case tcell.KeyCtrlSpace:
