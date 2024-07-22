@@ -257,13 +257,34 @@ var taskInteractiveCommand = &cobra.Command{
 					return b.Priority < a.Priority
 				}
 
+				// by schedule
+				if a.Schedule != nil && b.Schedule != nil {
+					aStart := a.Schedule.Start.Hour()*60 + a.Schedule.Start.Minute()
+					bStart := b.Schedule.Start.Hour()*60 + b.Schedule.Start.Minute()
+					if aStart != bStart {
+						if aStart == 0 && bStart != 0 {
+							return false
+						}
+						if aStart != 0 && bStart == 0 {
+							return true
+						}
+						return aStart < bStart
+					}
+				}
+				if a.Schedule != nil && b.Schedule == nil {
+					return true
+				}
+				if a.Schedule == nil && b.Schedule != nil {
+					return false
+				}
+
 				// by location
 				aNode := a.Node.(*localWiki.LocalNode)
 				bNode := b.Node.(*localWiki.LocalNode)
 				if aNode.GetPath() == bNode.GetPath() {
 					return a.LineNumber < b.LineNumber
 				}
-				return a.Text < b.Text
+				return a.Node.GetName() < b.Node.GetName()
 			})
 
 			return taskinteractive.GetTasksResult{
