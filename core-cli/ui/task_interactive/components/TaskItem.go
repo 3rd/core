@@ -2,6 +2,7 @@ package components
 
 import (
 	"core/ui/task_interactive/theme"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -16,6 +17,8 @@ type TaskItem struct {
 	LongestProjectLength int
 	Selected             bool
 }
+
+var taskLabelRegex = regexp.MustCompile(`^([a-zA-Z0-9_-]+:)`)
 
 func (c *TaskItem) Render() ui.Buffer {
 	b := ui.Buffer{}
@@ -55,9 +58,16 @@ func (c *TaskItem) Render() ui.Buffer {
 	}
 
 	if c.Selected {
-		taskStyle.Background = theme.SELECTED_TASK_BG
-		taskStyle.Foreground = theme.SELECTED_TASK_FG
-		projectStyle.Background = taskStyle.Background.Darken(0.05)
+
+		if c.Task.IsInProgress() {
+			taskStyle.Background = theme.TASK_CURRENT_SELECTED_BG
+			taskStyle.Foreground = theme.TASK_CURRENT_SELECTED_FG
+			projectStyle.Background = taskStyle.Background.Darken(0.05)
+		} else {
+			taskStyle.Background = theme.TASK_SELECTED_BG
+			taskStyle.Foreground = theme.TASK_SELECTED_FG
+			projectStyle.Background = taskStyle.Background.Darken(0.05)
+		}
 	}
 
 	checkmarkStyle := taskStyle
@@ -95,6 +105,14 @@ func (c *TaskItem) Render() ui.Buffer {
 	text := ui.Buffer{}
 	text.Text(0, 0, c.Task.Text, textStyle)
 	b.DrawBuffer(hoffset, 0, text)
+
+	// label
+	if taskLabelRegex.MatchString(c.Task.Text) {
+		labelText := taskLabelRegex.FindStringSubmatch(c.Task.Text)[1]
+		label := ui.Buffer{}
+		label.Text(0, 0, labelText, ui.Style{Foreground: theme.TASK_LABEL_FG})
+		b.DrawBuffer(hoffset, 0, label)
+	}
 
 	// reward
 	reward := ui.Buffer{}
