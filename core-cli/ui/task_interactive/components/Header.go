@@ -98,10 +98,11 @@ func (c *Header) Render() ui.Buffer {
 	rightRewardPoints.Text(2, 0, rightRewardPointsText, rightStyle)
 
 	// draw right
-	right.DrawBuffer(1, 1, rightWorkTime)
-	right.Resize(right.Width()+1, right.Height())
+	rightWidth := rightWorkTime.Width() + rightRewardPoints.Width() + 2
+	right.Resize(rightWidth, right.Height())
+	right.DrawBuffer(rightWidth-rightWorkTime.Width()-1, 1, rightWorkTime)
 	right.ApplyStyle(rightStyle)
-	right.DrawBuffer(right.Width()-rightRewardPoints.Width()-1, 2, rightRewardPoints)
+	right.DrawBuffer(rightWidth-rightRewardPoints.Width()-1, 2, rightRewardPoints)
 
 	// draw left/right
 	b.DrawBuffer(0, 0, left)
