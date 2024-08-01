@@ -377,7 +377,9 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 				app.handleHistoryScrollUp()
 			}
 		case ' ':
-			app.handleToggleInProgress()
+			if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+				app.handleToggleInProgress()
+			}
 		case '1':
 			app.state.CurrentTab = state.APP_TAB_ACTIVE
 			app.Render()
@@ -386,11 +388,17 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			app.Render()
 		}
 	case tcell.KeyCtrlC:
-		app.handleDeactivateTask()
+		if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+			app.handleDeactivateTask()
+		}
 	case tcell.KeyEnter:
-		app.handleEdit()
+		if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+			app.handleEdit()
+		}
 	case tcell.KeyCtrlSpace:
-		app.handleToggleDone()
+		if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+			app.handleToggleDone()
+		}
 	}
 	app.Update()
 }
