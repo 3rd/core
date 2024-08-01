@@ -117,8 +117,9 @@ var taskInteractiveCommand = &cobra.Command{
 			}
 
 			// load tasks
+			activeTasks := []*wiki.Task{}
 			tasks := []*wiki.Task{}
-			longestProjectLength := 0
+			longestActiveProjectLength := 0
 
 			recentlyDoneOffset, _ := time.ParseDuration("24h")
 			now := time.Now()
@@ -136,7 +137,7 @@ var taskInteractiveCommand = &cobra.Command{
 				}
 
 				nodeTasks := node.GetTasks()
-				hasAddedTaskForNode := false
+				hasAddedActiveTaskForNode := false
 
 				for _, task := range nodeTasks {
 					var taskToAdd *wiki.Task
@@ -212,29 +213,31 @@ var taskInteractiveCommand = &cobra.Command{
 						}
 					}
 
-					if taskToAdd != nil {
-						// patch completion
-						if task.HasCompletionForDate(now) {
-							task.Status = wiki.TASK_STATUS_DONE
-						}
+					// patch completion
+					if task.HasCompletionForDate(now) {
+						task.Status = wiki.TASK_STATUS_DONE
+					}
 
-						tasks = append(tasks, taskToAdd)
-						hasAddedTaskForNode = true
+					// add task
+					tasks = append(tasks, task)
+					if taskToAdd != nil {
+						activeTasks = append(activeTasks, taskToAdd)
+						hasAddedActiveTaskForNode = true
 					}
 				}
 
-				if hasAddedTaskForNode {
-					projectLength := len(node.GetName())
-					if projectLength > longestProjectLength {
-						longestProjectLength = projectLength
+				projectLength := len(node.GetName())
+				if hasAddedActiveTaskForNode {
+					if projectLength > longestActiveProjectLength {
+						longestActiveProjectLength = projectLength
 					}
 				}
 			}
 
 			// custom sort
-			sort.Slice(tasks, func(i, j int) bool {
-				a := tasks[i]
-				b := tasks[j]
+			sort.Slice(activeTasks, func(i, j int) bool {
+				a := activeTasks[i]
+				b := activeTasks[j]
 
 				// top: sticky
 				if b.Priority >= 100 {
@@ -288,8 +291,9 @@ var taskInteractiveCommand = &cobra.Command{
 			})
 
 			return taskinteractive.GetTasksResult{
-				Tasks:                tasks,
-				LongestProjectLength: longestProjectLength,
+				Tasks:                      tasks,
+				ActiveTasks:                activeTasks,
+				LongestActiveProjectLength: longestActiveProjectLength,
 			}
 		}
 

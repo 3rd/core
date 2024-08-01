@@ -21,8 +21,9 @@ import (
 const INDENT = "  "
 
 type GetTasksResult struct {
-	Tasks                []*wiki.Task
-	LongestProjectLength int
+	Tasks                      []*wiki.Task
+	ActiveTasks                []*wiki.Task
+	LongestActiveProjectLength int
 }
 type Providers struct {
 	GetRoot  func() string
@@ -47,7 +48,7 @@ func (app *App) Setup() {
 			case <-done:
 				return
 			case <-ticker.C:
-				if app.state.Mode == state.APP_MODE_DEFAULT {
+				if app.state.ActiveMode == state.APP_ACTIVE_MODE_DEFAULT {
 					app.Update()
 				}
 			}
@@ -62,7 +63,7 @@ func (app *App) Setup() {
 		for {
 			select {
 			case <-w.Event:
-				if app.state.Mode == state.APP_MODE_DEFAULT {
+				if app.state.ActiveMode == state.APP_ACTIVE_MODE_DEFAULT {
 					app.loadTasks()
 					app.Update()
 				}
@@ -83,54 +84,70 @@ func (app *App) Setup() {
 func (app *App) loadTasks() {
 	getTasksResult := app.providers.GetTasks()
 	app.state.Tasks = getTasksResult.Tasks
-	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
+	app.state.ActiveTasks = getTasksResult.ActiveTasks
+	app.state.LongestProjectLength = getTasksResult.LongestActiveProjectLength
 
 	// guard out of bounds
-	if app.state.SelectedIndex >= len(app.state.Tasks) {
-		app.state.SelectedIndex = len(app.state.Tasks) - 1
+	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
+		app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
 	}
 }
 
 func (app *App) handleNavigateDown() {
 	// select task
-	i := app.state.SelectedIndex
-	if i >= len(app.state.Tasks)-1 {
+	i := app.state.ActiveSelectedIndex
+	if i >= len(app.state.ActiveTasks)-1 {
 		return
 	}
 	i = i + 1
-	app.state.SelectedIndex = i
+	app.state.ActiveSelectedIndex = i
 	// scroll
 	_, h := app.Screen.Size()
-	if i >= h-2+app.state.ScrollOffset {
-		app.state.ScrollOffset++
+	if i >= h-2+app.state.ActiveScrollOffset {
+		app.state.ActiveScrollOffset++
 	}
 	app.Update()
 }
 
 func (app *App) handleNavigateUp() {
 	// select task
-	i := app.state.SelectedIndex
+	i := app.state.ActiveSelectedIndex
 	if i <= 0 {
 		return
 	}
 	i = i - 1
-	app.state.SelectedIndex = i
+	app.state.ActiveSelectedIndex = i
 	// scroll
-	if i < app.state.ScrollOffset {
-		app.state.ScrollOffset--
+	if i < app.state.ActiveScrollOffset {
+		app.state.ActiveScrollOffset--
 	}
 	app.Update()
 }
 
+func (app *App) handleHistoryScrollDown() {
+	historyEntries := app.state.GetHistoryEntries()
+	if app.state.HistoryEntryOffset < len(historyEntries)-1 {
+		app.state.HistoryEntryOffset++
+		app.Update()
+	}
+}
+
+func (app *App) handleHistoryScrollUp() {
+	if app.state.HistoryEntryOffset > 0 {
+		app.state.HistoryEntryOffset--
+		app.Update()
+	}
+}
+
 func (app *App) handleEdit() {
-	task := app.state.Tasks[app.state.SelectedIndex]
+	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	if node == nil {
 		return
 	}
 
-	initialMode := app.state.Mode
-	app.state.Mode = state.APP_MODE_EDITOR
+	initialMode := app.state.ActiveMode
+	app.state.ActiveMode = state.APP_ACTIVE_MODE_EDITOR
 
 	app.Screen.Suspend()
 	cmd := exec.Command("nvim", fmt.Sprintf("+%d", task.LineNumber+1), node.GetPath(), "+norm zz", "+norm zv")
@@ -140,7 +157,7 @@ func (app *App) handleEdit() {
 	_ = cmd.Run()
 
 	app.Screen.Resume()
-	app.state.Mode = initialMode
+	app.state.ActiveMode = initialMode
 	app.loadTasks()
 	app.Update()
 }
@@ -156,7 +173,7 @@ func getIndentLevel(task *wiki.Task) int {
 }
 
 func (app *App) handleToggleInProgress() {
-	task := app.state.Tasks[app.state.SelectedIndex]
+	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	now := time.Now()
 	text, err := node.Text()
@@ -207,7 +224,7 @@ func (app *App) handleToggleInProgress() {
 }
 
 func (app *App) handleToggleDone() {
-	task := app.state.Tasks[app.state.SelectedIndex]
+	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	now := time.Now()
 	text, err := node.Text()
@@ -317,11 +334,11 @@ func (app *App) handleToggleDone() {
 }
 
 func (app *App) handleDeactivateTask() {
-	if len(app.state.Tasks) == 0 {
+	if len(app.state.ActiveTasks) == 0 {
 		return
 	}
 
-	task := app.state.Tasks[app.state.SelectedIndex]
+	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	text, _ := node.Text()
 	lines := strings.Split(string(text), "\n")
@@ -346,11 +363,27 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 		case 'q':
 			app.Quit()
 		case 'j':
-			app.handleNavigateDown()
+			if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+				app.handleNavigateDown()
+			}
+			if app.state.CurrentTab == state.APP_TAB_HISTORY {
+				app.handleHistoryScrollDown()
+			}
 		case 'k':
-			app.handleNavigateUp()
+			if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+				app.handleNavigateUp()
+			}
+			if app.state.CurrentTab == state.APP_TAB_HISTORY {
+				app.handleHistoryScrollUp()
+			}
 		case ' ':
 			app.handleToggleInProgress()
+		case '1':
+			app.state.CurrentTab = state.APP_TAB_ACTIVE
+			app.Render()
+		case '2':
+			app.state.CurrentTab = state.APP_TAB_HISTORY
+			app.Render()
 		}
 	case tcell.KeyCtrlC:
 		app.handleDeactivateTask()
@@ -380,21 +413,34 @@ func (app *App) Render() ui.Buffer {
 	}
 	headerBuffer := b.DrawComponent(0, 0, &header)
 
-	taskList := components.TaskList{
-		Tasks:                app.state.Tasks,
-		Width:                app.Width(),
-		LongestProjectLength: app.state.LongestProjectLength,
-		SelectedIndex:        app.state.SelectedIndex,
-	}
-	b.DrawComponent(0, 4, &taskList)
+	// active tab
+	if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+		taskList := components.TaskList{
+			Tasks:                app.state.ActiveTasks,
+			Width:                app.Width(),
+			LongestProjectLength: app.state.LongestProjectLength,
+			SelectedIndex:        app.state.ActiveSelectedIndex,
+		}
+		b.DrawComponent(0, headerBuffer.Height(), &taskList)
 
-	// guard max scroll
-	maxScroll := len(app.state.Tasks) - app.Height() + headerBuffer.Height()
-	if maxScroll < 0 {
-		maxScroll = 0
+		// guard max scroll
+		maxScroll := len(app.state.ActiveTasks) - app.Height() + headerBuffer.Height()
+		if maxScroll < 0 {
+			maxScroll = 0
+		}
+		if app.state.ActiveScrollOffset > maxScroll {
+			app.state.ActiveScrollOffset = maxScroll
+		}
 	}
-	if app.state.ScrollOffset > maxScroll {
-		app.state.ScrollOffset = maxScroll
+
+	// history tab
+	if app.state.CurrentTab == state.APP_TAB_HISTORY {
+		historyView := components.HistoryView{
+			AppState: &app.state,
+			Width:    app.Width(),
+			Height:   app.Height() - headerBuffer.Height(),
+		}
+		b.DrawComponent(0, headerBuffer.Height(), &historyView)
 	}
 
 	return b

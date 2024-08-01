@@ -23,9 +23,6 @@ func (c *Header) Render() ui.Buffer {
 
 	// styles
 	bgStyle := ui.Style{Background: theme.HEADER_BG, Foreground: theme.HEADER_FG}
-	if c.AppState.Mode == state.APP_MODE_FOCUS {
-		bgStyle = ui.Style{Background: theme.HEADER_BG_FOCUSED, Foreground: theme.HEADER_FG_FOCUSED}
-	}
 	leftStyle := bgStyle
 	leftStyle.Background = leftStyle.Background.Darken(0.03)
 	rightStyle := leftStyle
@@ -79,7 +76,7 @@ func (c *Header) Render() ui.Buffer {
 	// compute total work time and reward points
 	totalWorkTime := time.Duration(0)
 	totalRewardPoints := 0
-	for _, t := range c.AppState.Tasks {
+	for _, t := range c.AppState.ActiveTasks {
 		totalWorkTime += t.GetTotalSessionTime()
 		if t.Status == wiki.TASK_STATUS_DONE {
 			totalRewardPoints += utils.ComputeTaskReward(t)
@@ -112,15 +109,25 @@ func (c *Header) Render() ui.Buffer {
 	}
 	b.DrawBuffer(rightX, 0, right)
 
-	// draw center
-	if c.AppState.Mode == state.APP_MODE_FOCUS {
-		center := ui.Buffer{}
-		center.Resize(c.Width-left.Width()-right.Width(), 4)
-		center.FillStyle(bgStyle)
-		text := "FOCUS"
-		center.Text(center.Width()/2-len(text)/2, 1, text, bgStyle)
-		b.DrawBuffer(left.Width(), 0, center)
+	// tabs
+	tabsBuffer := ui.Buffer{}
+	activeTabStyle := ui.Style{Background: theme.TAB_ACTIVE_BG, Foreground: theme.TAB_ACTIVE_FG}
+	inactiveTabStyle := ui.Style{Background: theme.TAB_INACTIVE_BG, Foreground: theme.TAB_INACTIVE_FG}
+
+	activeTab := "  (1) Active  "
+	if c.AppState.CurrentTab == state.APP_TAB_ACTIVE {
+		tabsBuffer.Text(0, 0, activeTab, activeTabStyle)
+	} else {
+		tabsBuffer.Text(0, 0, activeTab, inactiveTabStyle)
 	}
 
+	historyTab := "  (2) History  "
+	if c.AppState.CurrentTab == state.APP_TAB_HISTORY {
+		tabsBuffer.Text(len(activeTab), 0, historyTab, activeTabStyle)
+	} else {
+		tabsBuffer.Text(len(activeTab), 0, historyTab, inactiveTabStyle)
+	}
+
+	b.DrawBuffer(c.Width/2-tabsBuffer.Width()/2, 1, tabsBuffer)
 	return b
 }
