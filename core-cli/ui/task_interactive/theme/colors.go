@@ -30,8 +30,8 @@ var (
 	TASK_DONE_FG             ui.Color = "#827d98"
 	TASK_CURRENT_BG          ui.Color = "#7a0891"
 	TASK_CURRENT_FG          ui.Color = TASK_CURRENT_BG.OptimalForeground()
-	TASK_STICKY_BG           ui.Color = "#813160"
-	TASK_STICKY_FG           ui.Color = TASK_STICKY_BG.OptimalForeground()
+	TASK_STICKY_BG           ui.Color = "#784676"
+	TASK_STICKY_FG           ui.Color = "#ffbbfc"
 	TASK_SELECTED_BG         ui.Color = "#40666d"
 	TASK_SELECTED_FG         ui.Color = "#5ee5e5"
 	TASK_CURRENT_SELECTED_BG ui.Color = "#932ac2"

@@ -38,8 +38,7 @@ func (c *TaskItem) Render() ui.Buffer {
 	if taskReward >= 100 {
 		taskStyle.Background = theme.TASK_STICKY_BG
 		taskStyle.Foreground = theme.TASK_STICKY_FG
-		projectStyle.Background = theme.TASK_STICKY_BG
-		projectStyle.Foreground = theme.TASK_CURRENT_FG
+		projectStyle.Background = theme.TASK_STICKY_BG.Darken(0.05)
 	}
 
 	if c.Task.IsInProgress() {
