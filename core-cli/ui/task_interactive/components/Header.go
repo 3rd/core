@@ -3,10 +3,12 @@ package components
 import (
 	state "core/ui/task_interactive/state"
 	"core/ui/task_interactive/theme"
+	"core/utils"
 	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/3rd/core/core-lib/wiki"
 	ui "github.com/3rd/go-futui"
 )
 
@@ -79,11 +81,9 @@ func (c *Header) Render() ui.Buffer {
 	totalRewardPoints := 0
 	for _, t := range c.AppState.Tasks {
 		totalWorkTime += t.GetTotalSessionTime()
-		taskReward := t.Priority
-		if taskReward == 0 {
-			taskReward = 1
+		if t.Status == wiki.TASK_STATUS_DONE {
+			totalRewardPoints += utils.ComputeTaskReward(t)
 		}
-		totalRewardPoints += int(taskReward)
 	}
 
 	// right: work time

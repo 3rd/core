@@ -2,6 +2,7 @@ package components
 
 import (
 	"core/ui/task_interactive/theme"
+	"core/utils"
 	"regexp"
 	"strconv"
 	"time"
@@ -24,10 +25,7 @@ func (c *TaskItem) Render() ui.Buffer {
 	b := ui.Buffer{}
 	hoffset := 0
 
-	taskReward := c.Task.Priority
-	if taskReward == 0 {
-		taskReward = 1
-	}
+	taskReward := utils.ComputeTaskReward(c.Task)
 
 	// styles
 	taskStyle := ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG}
