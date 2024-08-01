@@ -27,7 +27,7 @@ func (c *HistoryView) Render() ui.Buffer {
 	for i := c.AppState.HistoryEntryOffset; i < len(historyEntries) && yOffset < c.Height; i++ {
 		entry := historyEntries[i]
 		dateStr := entry.Date.Format("2006-01-02")
-		b.Text(0, yOffset, dateStr, ui.Style{Foreground: theme.HISTORY_DATE_FG})
+		b.Text(1, yOffset, dateStr, ui.Style{Foreground: theme.HISTORY_DATE_FG})
 		yOffset++
 
 		for _, task := range entry.Tasks {
@@ -41,8 +41,8 @@ func (c *HistoryView) Render() ui.Buffer {
 				projectName = strings.TrimPrefix(projectName, "project-")
 			}
 
-			b.Text(0, yOffset, fmt.Sprintf(" ▕%s: ", projectName), ui.Style{Foreground: theme.HISTORY_PROJECT_FG})
-			b.Text(6+len(projectName), yOffset, task.Text, ui.Style{Foreground: theme.HISTORY_TASK_FG})
+			b.Text(0, yOffset, fmt.Sprintf("  ▕%s: ", projectName), ui.Style{Foreground: theme.HISTORY_PROJECT_FG})
+			b.Text(7+len(projectName), yOffset, task.Text, ui.Style{Foreground: theme.HISTORY_TASK_FG})
 			yOffset++
 		}
 
