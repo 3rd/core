@@ -5,6 +5,7 @@ import (
 	"core/utils"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/3rd/core/core-lib/wiki"
@@ -91,6 +92,9 @@ func (c *TaskItem) Render() ui.Buffer {
 	projectText := ""
 	if c.Task.Node != nil {
 		projectText = c.Task.Node.GetName()
+
+		// patch project name (strip project-)
+		projectText = strings.TrimPrefix(projectText, "project-")
 	}
 	project := ui.Buffer{}
 	project.Resize(c.LongestProjectLength+2, 1)
