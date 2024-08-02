@@ -78,13 +78,22 @@ func (n *LocalNode) Parse(mode PARSE_MODE) error {
 	}
 
 	if mode == PARSE_MODE_META {
+		hasMeta := true
 		if !strings.HasPrefix(text, "@meta") {
-			return nil
+			hasMeta = false
 		}
 		endIndex := strings.Index(text, "@end")
 		if endIndex == -1 {
+			hasMeta = false
+		}
+		if !hasMeta {
+			n.document, err = syslang.NewDocument("")
+			if err != nil {
+				return err
+			}
 			return nil
 		}
+
 		text = text[:endIndex+len("@end")]
 	}
 
