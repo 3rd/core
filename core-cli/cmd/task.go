@@ -226,8 +226,8 @@ var taskInteractiveCommand = &cobra.Command{
 					}
 				}
 
-				projectLength := len(node.GetName())
 				if hasAddedActiveTaskForNode {
+					projectLength := len(strings.TrimPrefix(node.GetName(), "project-"))
 					if projectLength > longestActiveProjectLength {
 						longestActiveProjectLength = projectLength
 					}
