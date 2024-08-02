@@ -22,6 +22,11 @@ var wikiListCommand = &cobra.Command{
 			panic(err)
 		}
 
+		typeFilter, err := cmd.Flags().GetString("type")
+		if err != nil {
+			panic(err)
+		}
+
 		// regular
 		if !isDebug {
 			wiki, err := wiki.NewLocalWiki(wiki.LocalWikiConfig{
@@ -34,7 +39,10 @@ var wikiListCommand = &cobra.Command{
 			nodes, _ := wiki.GetNodes()
 
 			for _, node := range nodes {
-				fmt.Printf("%s\n", node.GetID())
+				meta := node.GetMeta()
+				if meta != nil && typeFilter == "" || meta["type"] == typeFilter {
+					fmt.Printf("%s\n", node.GetID())
+				}
 			}
 		}
 
@@ -49,7 +57,10 @@ var wikiListCommand = &cobra.Command{
 			}
 			nodes, _ := wiki.GetNodes()
 			for _, node := range nodes {
-				fmt.Printf("%s %s\n", node.GetID(), node.ParseDuration)
+				meta := node.GetMeta()
+				if meta != nil && typeFilter == "" || meta["type"] == typeFilter {
+					fmt.Printf("%s %s\n", node.GetID(), node.ParseDuration)
+				}
 			}
 		}
 	},
@@ -97,6 +108,7 @@ func init() {
 	cmd := &cobra.Command{Use: "wiki"}
 
 	wikiListCommand.Flags().Bool("debug", false, "debug parsing time for each nodes")
+	wikiListCommand.Flags().String("type", "", "filter nodes by type")
 	cmd.AddCommand(wikiListCommand)
 
 	wikiResolveCommand.Flags().Bool("strict", false, "will not return the default would-be path for if the node is not found")
