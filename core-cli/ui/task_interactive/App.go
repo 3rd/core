@@ -550,10 +550,13 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 		case tcell.KeyRune:
 			switch ev.Rune() {
 			case 'j':
+				app.handleHistoryScrollDown()
 			case 'd':
 				app.handleHistoryScrollDown()
 			case 'k':
+				app.handleHistoryScrollUp()
 			case 'u':
+				app.handleHistoryScrollUp()
 			case 's':
 				app.handleHistoryScrollUp()
 			}
