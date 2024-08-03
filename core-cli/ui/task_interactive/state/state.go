@@ -11,8 +11,9 @@ type APP_TAB string
 type APP_ACTIVE_MODE string
 
 const (
-	APP_TAB_ACTIVE  APP_TAB = ""
-	APP_TAB_HISTORY APP_TAB = "history"
+	APP_TAB_ACTIVE   APP_TAB = ""
+	APP_TAB_HISTORY  APP_TAB = "history"
+	APP_TAB_PROJECTS APP_TAB = "projects"
 
 	APP_ACTIVE_MODE_DEFAULT APP_ACTIVE_MODE = ""
 	APP_ACTIVE_MODE_EDITOR  APP_ACTIVE_MODE = "editor"
@@ -24,14 +25,24 @@ type HistoryEntry struct {
 }
 
 type AppState struct {
-	CurrentTab           APP_TAB
-	Tasks                []*wiki.Task
-	ActiveTasks          []*wiki.Task
-	LongestProjectLength int
-	ActiveMode           APP_ACTIVE_MODE
-	ActiveSelectedIndex  int
-	ActiveScrollOffset   int
-	HistoryEntryOffset   int
+	CurrentTab   APP_TAB
+	Nodes        []wiki.Node
+	Tasks        []*wiki.Task
+	ActiveTasks  []*wiki.Task
+	HeaderHeight int
+	// active
+	LongestActiveProjectLength int
+	ActiveMode                 APP_ACTIVE_MODE
+	ActiveSelectedIndex        int
+	ActiveScrollOffset         int
+	// history
+	HistoryEntryOffset int
+	// projects
+	LongestProjectLength      int
+	ProjectSelectedIndex      int
+	ProjectScrollOffset       int
+	ProjectsTaskSelectedIndex int
+	TaskScrollOffset          int
 }
 
 func (app *AppState) GetLongestTaskLength() int {
@@ -94,4 +105,23 @@ func (app *AppState) GetHistoryEntries() []HistoryEntry {
 	})
 
 	return historyEntries
+}
+
+func (app *AppState) GetCurrentProjectTasks() []*wiki.Task {
+	if app.ProjectSelectedIndex < 0 || app.ProjectSelectedIndex >= len(app.Nodes) {
+		return nil
+	}
+
+	project := app.Nodes[app.ProjectSelectedIndex]
+	tasks := []*wiki.Task{}
+
+	for _, task := range app.Tasks {
+		if task.Status != wiki.TASK_STATUS_ACTIVE && task.Status != wiki.TASK_STATUS_DEFAULT {
+			continue
+		}
+		if task.Node.GetID() == project.GetID() {
+			tasks = append(tasks, task)
+		}
+	}
+	return tasks
 }

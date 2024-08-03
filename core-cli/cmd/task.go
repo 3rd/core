@@ -120,6 +120,7 @@ var taskInteractiveCommand = &cobra.Command{
 			activeTasks := []*wiki.Task{}
 			tasks := []*wiki.Task{}
 			longestActiveProjectLength := 0
+			longestProjectLength := 0
 
 			recentlyDoneOffset, _ := time.ParseDuration("24h")
 			now := time.Now()
@@ -226,8 +227,11 @@ var taskInteractiveCommand = &cobra.Command{
 					}
 				}
 
+				projectLength := len(strings.TrimPrefix(node.GetName(), "project-"))
+				if projectLength > longestProjectLength {
+					longestProjectLength = projectLength
+				}
 				if hasAddedActiveTaskForNode {
-					projectLength := len(strings.TrimPrefix(node.GetName(), "project-"))
 					if projectLength > longestActiveProjectLength {
 						longestActiveProjectLength = projectLength
 					}
@@ -290,9 +294,20 @@ var taskInteractiveCommand = &cobra.Command{
 				return a.Node.GetName() < b.Node.GetName()
 			})
 
+			taskNodeMap := map[string]wiki.Node{}
+			for _, task := range tasks {
+				taskNodeMap[task.Node.GetID()] = task.Node
+			}
+			taskNodes := []wiki.Node{}
+			for _, node := range taskNodeMap {
+				taskNodes = append(taskNodes, node)
+			}
+
 			return taskinteractive.GetTasksResult{
+				Nodes:                      taskNodes,
 				Tasks:                      tasks,
 				ActiveTasks:                activeTasks,
+				LongestProjectLength:       longestProjectLength,
 				LongestActiveProjectLength: longestActiveProjectLength,
 			}
 		}

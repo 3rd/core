@@ -49,7 +49,7 @@ func (c *Header) Render() ui.Buffer {
 	// left: bar
 	leftBar := ui.Buffer{}
 	barWidth := leftLabel.Width()
-	min := c.AppState.LongestProjectLength + 3
+	min := c.AppState.LongestActiveProjectLength + 3
 
 	if barWidth < min {
 		barWidth = min
@@ -114,18 +114,25 @@ func (c *Header) Render() ui.Buffer {
 	activeTabStyle := ui.Style{Background: theme.TAB_ACTIVE_BG, Foreground: theme.TAB_ACTIVE_FG}
 	inactiveTabStyle := ui.Style{Background: theme.TAB_INACTIVE_BG, Foreground: theme.TAB_INACTIVE_FG}
 
-	activeTab := "  (1) Active  "
+	activeTab := " (1) Active "
 	if c.AppState.CurrentTab == state.APP_TAB_ACTIVE {
 		tabsBuffer.Text(0, 0, activeTab, activeTabStyle)
 	} else {
 		tabsBuffer.Text(0, 0, activeTab, inactiveTabStyle)
 	}
 
-	historyTab := "  (2) History  "
+	historyTab := " (2) History "
 	if c.AppState.CurrentTab == state.APP_TAB_HISTORY {
 		tabsBuffer.Text(len(activeTab), 0, historyTab, activeTabStyle)
 	} else {
 		tabsBuffer.Text(len(activeTab), 0, historyTab, inactiveTabStyle)
+	}
+
+	projectsTab := " (3) Projects "
+	if c.AppState.CurrentTab == state.APP_TAB_PROJECTS {
+		tabsBuffer.Text(len(activeTab)+len(historyTab), 0, projectsTab, activeTabStyle)
+	} else {
+		tabsBuffer.Text(len(activeTab)+len(historyTab), 0, projectsTab, inactiveTabStyle)
 	}
 
 	b.DrawBuffer(c.Width/2-tabsBuffer.Width()/2, 1, tabsBuffer)

@@ -20,11 +20,24 @@ import (
 
 const INDENT = "  "
 
+func getIndentLevel(task *wiki.Task) int {
+	indentLevel := 0
+	lineText := task.LineText
+	for strings.HasPrefix(lineText, INDENT) {
+		indentLevel++
+		lineText = lineText[len(INDENT):]
+	}
+	return indentLevel
+}
+
 type GetTasksResult struct {
+	Nodes                      []wiki.Node
 	Tasks                      []*wiki.Task
 	ActiveTasks                []*wiki.Task
 	LongestActiveProjectLength int
+	LongestProjectLength       int
 }
+
 type Providers struct {
 	GetRoot  func() string
 	GetTasks func() GetTasksResult
@@ -83,9 +96,11 @@ func (app *App) Setup() {
 
 func (app *App) loadTasks() {
 	getTasksResult := app.providers.GetTasks()
+	app.state.Nodes = getTasksResult.Nodes
 	app.state.Tasks = getTasksResult.Tasks
 	app.state.ActiveTasks = getTasksResult.ActiveTasks
-	app.state.LongestProjectLength = getTasksResult.LongestActiveProjectLength
+	app.state.LongestActiveProjectLength = getTasksResult.LongestActiveProjectLength
+	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
 
 	// guard out of bounds
 	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
@@ -93,7 +108,7 @@ func (app *App) loadTasks() {
 	}
 }
 
-func (app *App) handleNavigateDown() {
+func (app *App) handleActiveNavigateDown() {
 	// select task
 	i := app.state.ActiveSelectedIndex
 	if i >= len(app.state.ActiveTasks)-1 {
@@ -109,7 +124,7 @@ func (app *App) handleNavigateDown() {
 	app.Update()
 }
 
-func (app *App) handleNavigateUp() {
+func (app *App) handleActiveNavigateUp() {
 	// select task
 	i := app.state.ActiveSelectedIndex
 	if i <= 0 {
@@ -139,7 +154,7 @@ func (app *App) handleHistoryScrollUp() {
 	}
 }
 
-func (app *App) handleEdit() {
+func (app *App) handleActiveEdit() {
 	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	if node == nil {
@@ -162,17 +177,7 @@ func (app *App) handleEdit() {
 	app.Update()
 }
 
-func getIndentLevel(task *wiki.Task) int {
-	indentLevel := 0
-	lineText := task.LineText
-	for strings.HasPrefix(lineText, INDENT) {
-		indentLevel++
-		lineText = lineText[len(INDENT):]
-	}
-	return indentLevel
-}
-
-func (app *App) handleToggleInProgress() {
+func (app *App) handleActiveToggleInProgress() {
 	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	now := time.Now()
@@ -223,7 +228,7 @@ func (app *App) handleToggleInProgress() {
 	app.Update()
 }
 
-func (app *App) handleToggleDone() {
+func (app *App) handleActiveToggleDone() {
 	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	now := time.Now()
@@ -279,9 +284,9 @@ func (app *App) handleToggleDone() {
 		// marker (no schedule): [x] -> [-] or [-] -> [x]
 		if task.Schedule == nil {
 			if task.Status == wiki.TASK_STATUS_DONE {
-				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[x]", "[-]")
+				lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[x]", "[-]", 1)
 			} else {
-				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[-]", "[x]")
+				lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[-]", "[x]", 1)
 			}
 		}
 
@@ -289,11 +294,11 @@ func (app *App) handleToggleDone() {
 		if task.Schedule != nil {
 			switch task.Status {
 			case wiki.TASK_STATUS_DONE:
-				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[x]", "[ ]")
+				lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[x]", "[ ]", 1)
 			case wiki.TASK_STATUS_DEFAULT:
-				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[ ]", "[x]")
+				lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[ ]", "[x]", 1)
 			case wiki.TASK_STATUS_ACTIVE:
-				lines[task.LineNumber] = strings.ReplaceAll(lines[task.LineNumber], "[-]", "[x]")
+				lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[-]", "[x]", 1)
 			}
 		}
 
@@ -333,7 +338,7 @@ func (app *App) handleToggleDone() {
 	app.Update()
 }
 
-func (app *App) handleDeactivateTask() {
+func (app *App) handleActiveDeactivateTask() {
 	if len(app.state.ActiveTasks) == 0 {
 		return
 	}
@@ -356,50 +361,198 @@ func (app *App) handleDeactivateTask() {
 	app.Update()
 }
 
+func (app *App) handleProjectsNavigation(forward bool) {
+	if len(app.state.Nodes) == 0 {
+		return
+	}
+	if forward {
+		if app.state.ProjectSelectedIndex < len(app.state.Nodes)-1 {
+			app.state.ProjectSelectedIndex++
+		}
+	} else {
+		if app.state.ProjectSelectedIndex > 0 {
+			app.state.ProjectSelectedIndex--
+		}
+	}
+	app.projectsAdjustSidebarScroll()
+	app.state.ProjectsTaskSelectedIndex = 0
+	app.state.TaskScrollOffset = 0
+}
+
+func (app *App) handleProjectsTaskNavigation(down bool) {
+	tasks := app.state.GetCurrentProjectTasks()
+	if len(tasks) == 0 {
+		return
+	}
+	if down {
+		if app.state.ProjectsTaskSelectedIndex < len(tasks)-1 {
+			app.state.ProjectsTaskSelectedIndex++
+		}
+	} else {
+		if app.state.ProjectsTaskSelectedIndex > 0 {
+			app.state.ProjectsTaskSelectedIndex--
+		}
+	}
+	app.projectsAdjustTaskScroll()
+}
+
+func (app *App) projectsAdjustSidebarScroll() {
+	maxVisibleProjects := app.Height() - app.state.HeaderHeight - 1
+	maxScrollOffset := len(app.state.Nodes) - maxVisibleProjects
+	if maxScrollOffset < 0 {
+		maxScrollOffset = 0
+	}
+
+	if app.state.ProjectSelectedIndex < app.state.ProjectScrollOffset {
+		app.state.ProjectScrollOffset = app.state.ProjectSelectedIndex
+	} else if app.state.ProjectSelectedIndex >= app.state.ProjectScrollOffset+maxVisibleProjects {
+		app.state.ProjectScrollOffset = app.state.ProjectSelectedIndex - maxVisibleProjects + 1
+	}
+
+	if app.state.ProjectScrollOffset > maxScrollOffset {
+		app.state.ProjectScrollOffset = maxScrollOffset
+	}
+}
+
+func (app *App) projectsAdjustTaskScroll() {
+	maxVisibleTasks := app.Height() - app.state.HeaderHeight - 1
+	tasks := app.state.GetCurrentProjectTasks()
+	maxScrollOffset := len(tasks) - maxVisibleTasks
+	if maxScrollOffset < 0 {
+		maxScrollOffset = 0
+	}
+
+	if app.state.ProjectsTaskSelectedIndex < app.state.TaskScrollOffset {
+		app.state.TaskScrollOffset = app.state.ProjectsTaskSelectedIndex
+	} else if app.state.ProjectsTaskSelectedIndex >= app.state.TaskScrollOffset+maxVisibleTasks {
+		app.state.TaskScrollOffset = app.state.ProjectsTaskSelectedIndex - maxVisibleTasks + 1
+	}
+
+	if app.state.TaskScrollOffset > maxScrollOffset {
+		app.state.TaskScrollOffset = maxScrollOffset
+	}
+}
+
+func (app *App) handleProjectsToggleTask() {
+	tasks := app.state.GetCurrentProjectTasks()
+	if app.state.ProjectsTaskSelectedIndex < 0 || app.state.ProjectsTaskSelectedIndex > len(tasks) {
+		return
+	}
+
+	task := tasks[app.state.ProjectsTaskSelectedIndex]
+	if task == nil {
+		return
+	}
+	node := task.Node.(*localWiki.LocalNode)
+	text, _ := node.Text()
+	lines := strings.Split(string(text), "\n")
+
+	if task.Status == wiki.TASK_STATUS_ACTIVE {
+		task.Status = wiki.TASK_STATUS_DONE
+		lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[-]", "[ ]", 1)
+	} else {
+		task.Status = wiki.TASK_STATUS_ACTIVE
+		lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[ ]", "[-]", 1)
+	}
+
+	out, err := os.Create(node.GetPath())
+	if err != nil {
+		return
+	}
+	defer out.Close()
+	out.WriteString(strings.Join(lines, "\n"))
+	node.Refresh()
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
 	switch ev.Key() {
 	case tcell.KeyRune:
 		switch ev.Rune() {
-		case 'q':
+		case 'Q':
 			app.Quit()
-		case 'j':
-			if app.state.CurrentTab == state.APP_TAB_ACTIVE {
-				app.handleNavigateDown()
-			}
-			if app.state.CurrentTab == state.APP_TAB_HISTORY {
-				app.handleHistoryScrollDown()
-			}
-		case 'k':
-			if app.state.CurrentTab == state.APP_TAB_ACTIVE {
-				app.handleNavigateUp()
-			}
-			if app.state.CurrentTab == state.APP_TAB_HISTORY {
-				app.handleHistoryScrollUp()
-			}
-		case ' ':
-			if app.state.CurrentTab == state.APP_TAB_ACTIVE {
-				app.handleToggleInProgress()
-			}
 		case '1':
 			app.state.CurrentTab = state.APP_TAB_ACTIVE
-			app.Render()
 		case '2':
 			app.state.CurrentTab = state.APP_TAB_HISTORY
-			app.Render()
-		}
-	case tcell.KeyCtrlC:
-		if app.state.CurrentTab == state.APP_TAB_ACTIVE {
-			app.handleDeactivateTask()
-		}
-	case tcell.KeyEnter:
-		if app.state.CurrentTab == state.APP_TAB_ACTIVE {
-			app.handleEdit()
-		}
-	case tcell.KeyCtrlSpace:
-		if app.state.CurrentTab == state.APP_TAB_ACTIVE {
-			app.handleToggleDone()
+		case '3':
+			app.state.CurrentTab = state.APP_TAB_PROJECTS
+		case 'q':
+			switch app.state.CurrentTab {
+			case state.APP_TAB_PROJECTS:
+				app.state.CurrentTab = state.APP_TAB_HISTORY
+			case state.APP_TAB_HISTORY:
+				app.state.CurrentTab = state.APP_TAB_ACTIVE
+			}
+		case 'w':
+			switch app.state.CurrentTab {
+			case state.APP_TAB_ACTIVE:
+				app.state.CurrentTab = state.APP_TAB_HISTORY
+			case state.APP_TAB_HISTORY:
+				app.state.CurrentTab = state.APP_TAB_PROJECTS
+			}
 		}
 	}
+
+	if ev.Key() == tcell.KeyCtrlC {
+		app.Quit()
+	}
+
+	// active
+	if app.state.CurrentTab == state.APP_TAB_ACTIVE {
+		switch ev.Key() {
+		case tcell.KeyRune:
+			switch ev.Rune() {
+			case 'j':
+				app.handleActiveNavigateDown()
+			case 'k':
+				app.handleActiveNavigateUp()
+			case ' ':
+				app.handleActiveToggleInProgress()
+			}
+		case tcell.KeyCtrlC:
+			app.handleActiveDeactivateTask()
+		case tcell.KeyEnter:
+			app.handleActiveEdit()
+		case tcell.KeyCtrlSpace:
+			app.handleActiveToggleDone()
+		}
+	}
+
+	// history
+	if app.state.CurrentTab == state.APP_TAB_HISTORY {
+		switch ev.Key() {
+		case tcell.KeyRune:
+			switch ev.Rune() {
+			case 'j':
+			case 'd':
+				app.handleHistoryScrollDown()
+			case 'k':
+			case 'u':
+			case 's':
+				app.handleHistoryScrollUp()
+			}
+		}
+	}
+
+	// projects
+	if app.state.CurrentTab == state.APP_TAB_PROJECTS {
+		switch ev.Key() {
+		case tcell.KeyRune:
+			switch ev.Rune() {
+			case 'j':
+				app.handleProjectsTaskNavigation(true)
+			case 'k':
+				app.handleProjectsTaskNavigation(false)
+			case ' ':
+				app.handleProjectsToggleTask()
+			}
+		case tcell.KeyTab:
+			app.handleProjectsNavigation(true)
+		case tcell.KeyBacktab:
+			app.handleProjectsNavigation(false)
+		}
+	}
+
 	app.Update()
 }
 
@@ -420,13 +573,14 @@ func (app *App) Render() ui.Buffer {
 		Width:    app.Width(),
 	}
 	headerBuffer := b.DrawComponent(0, 0, &header)
+	app.state.HeaderHeight = headerBuffer.Height()
 
 	// active tab
 	if app.state.CurrentTab == state.APP_TAB_ACTIVE {
 		taskList := components.TaskList{
 			Tasks:                app.state.ActiveTasks,
 			Width:                app.Width(),
-			LongestProjectLength: app.state.LongestProjectLength,
+			LongestProjectLength: app.state.LongestActiveProjectLength,
 			SelectedIndex:        app.state.ActiveSelectedIndex,
 		}
 		b.DrawComponent(0, headerBuffer.Height(), &taskList)
@@ -449,6 +603,23 @@ func (app *App) Render() ui.Buffer {
 			Height:   app.Height() - headerBuffer.Height(),
 		}
 		b.DrawComponent(0, headerBuffer.Height(), &historyView)
+	}
+
+	// projects tab
+	if app.state.CurrentTab == state.APP_TAB_PROJECTS {
+		projectSidebar := components.ProjectSidebar{
+			AppState: &app.state,
+			Width:    app.state.LongestProjectLength + 2,
+			Height:   app.Height() - headerBuffer.Height(),
+		}
+		b.DrawComponent(0, headerBuffer.Height(), &projectSidebar)
+
+		projectTaskList := components.ProjectTaskList{
+			AppState: &app.state,
+			Width:    app.Width() - projectSidebar.Width,
+			Height:   app.Height() - headerBuffer.Height(),
+		}
+		b.DrawComponent(projectSidebar.Width, headerBuffer.Height(), &projectTaskList)
 	}
 
 	return b
