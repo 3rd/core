@@ -396,6 +396,35 @@ func (app *App) handleProjectsTaskNavigation(down bool) {
 	app.projectsAdjustTaskScroll()
 }
 
+func (app *App) handleProjectsEdit() {
+	project := app.state.Nodes[app.state.ProjectSelectedIndex]
+	if project == nil {
+		return
+	}
+
+	task := app.state.GetCurrentProjectTasks()[app.state.ProjectsTaskSelectedIndex]
+	if task == nil {
+		return
+	}
+
+	node := task.Node.(*localWiki.LocalNode)
+
+	initialMode := app.state.ActiveMode
+	app.state.ActiveMode = state.APP_ACTIVE_MODE_EDITOR
+
+	app.Screen.Suspend()
+	cmd := exec.Command("nvim", fmt.Sprintf("+%d", task.LineNumber+1), node.GetPath(), "+norm zz", "+norm zv")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	_ = cmd.Run()
+
+	app.Screen.Resume()
+	app.state.ActiveMode = initialMode
+	app.loadTasks()
+	app.Update()
+}
+
 func (app *App) projectsAdjustSidebarScroll() {
 	maxVisibleProjects := app.Height() - app.state.HeaderHeight - 1
 	maxScrollOffset := len(app.state.Nodes) - maxVisibleProjects
@@ -547,6 +576,8 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			app.handleProjectsNavigation(true)
 		case tcell.KeyBacktab:
 			app.handleProjectsNavigation(false)
+		case tcell.KeyEnter:
+			app.handleProjectsEdit()
 		}
 	}
 
