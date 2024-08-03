@@ -519,10 +519,6 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 		}
 	}
 
-	if ev.Key() == tcell.KeyCtrlC {
-		app.Quit()
-	}
-
 	// active
 	if app.state.CurrentTab == state.APP_TAB_ACTIVE {
 		switch ev.Key() {
