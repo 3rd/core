@@ -448,10 +448,8 @@ func (app *App) handleProjectsToggleTask() {
 	lines := strings.Split(string(text), "\n")
 
 	if task.Status == wiki.TASK_STATUS_ACTIVE {
-		task.Status = wiki.TASK_STATUS_DONE
 		lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[-]", "[ ]", 1)
 	} else {
-		task.Status = wiki.TASK_STATUS_ACTIVE
 		lines[task.LineNumber] = strings.Replace(lines[task.LineNumber], "[ ]", "[-]", 1)
 	}
 
@@ -461,7 +459,6 @@ func (app *App) handleProjectsToggleTask() {
 	}
 	defer out.Close()
 	out.WriteString(strings.Join(lines, "\n"))
-	node.Refresh()
 }
 
 func (app *App) OnKeypress(ev tcell.EventKey) {
