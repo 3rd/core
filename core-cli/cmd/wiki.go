@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	wiki "github.com/3rd/core/core-lib/wiki/local"
+	local_wiki "github.com/3rd/core/core-lib/wiki/local"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ var wikiListCommand = &cobra.Command{
 
 		// regular
 		if !isDebug {
-			wiki, err := wiki.NewLocalWiki(wiki.LocalWikiConfig{
+			wiki, err := local_wiki.NewLocalWiki(local_wiki.LocalWikiConfig{
 				Root:  root,
 				Parse: "meta",
 			})
@@ -48,7 +48,7 @@ var wikiListCommand = &cobra.Command{
 
 		// debug
 		if isDebug {
-			wiki, err := wiki.NewLocalWiki(wiki.LocalWikiConfig{
+			wiki, err := local_wiki.NewLocalWiki(local_wiki.LocalWikiConfig{
 				Root:  root,
 				Parse: "full",
 			})
@@ -83,7 +83,8 @@ var wikiResolveCommand = &cobra.Command{
 		if len(root) == 0 {
 			panic("WIKI_ROOT not set")
 		}
-		wiki, err := wiki.NewLocalWiki(wiki.LocalWikiConfig{
+
+		wiki, err := local_wiki.NewLocalWiki(local_wiki.LocalWikiConfig{
 			Root:  root,
 			Parse: "meta",
 		})
@@ -93,13 +94,20 @@ var wikiResolveCommand = &cobra.Command{
 
 		target := args[0]
 
-		if node, _ := wiki.GetNode(target); node != nil {
-			fmt.Print(node.GetPath())
-		} else {
-			if !isStrict {
-				unsortedPath := filepath.Join(env.WIKI_ROOT, "unsorted", target)
-				fmt.Print(unsortedPath)
+		nodes, err := wiki.GetNodes()
+		if err != nil {
+			panic(err)
+		}
+		for _, node := range nodes {
+			if node.GetName() == target {
+				fmt.Print(node.GetPath())
+				return
 			}
+		}
+
+		if !isStrict {
+			unsortedPath := filepath.Join(env.WIKI_ROOT, "unsorted", target)
+			fmt.Print(unsortedPath)
 		}
 	},
 }
