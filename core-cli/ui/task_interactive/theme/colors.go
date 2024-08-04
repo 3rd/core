@@ -42,8 +42,8 @@ var (
 
 	// projects
 	PROJECT_SIDEBAR_BG          ui.Color = "#383545"
-	PROJECT_SIDEBAR_FG          ui.Color = "#C5C2D6"
-	PROJECT_SIDEBAR_SELECTED_BG ui.Color = "#40666d"
-	PROJECT_SIDEBAR_SELECTED_FG ui.Color = "#5ee5e5"
+	PROJECT_SIDEBAR_FG          ui.Color = "#B0ACC3"
+	PROJECT_SIDEBAR_SELECTED_BG ui.Color = "#5F5B76"
+	PROJECT_SIDEBAR_SELECTED_FG ui.Color = "#C5C2D6"
 	PROJECTS_TASK_ACTIVE_FG     ui.Color = "#ffaa00"
 )

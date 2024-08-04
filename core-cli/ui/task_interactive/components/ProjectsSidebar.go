@@ -41,6 +41,11 @@ func (c *ProjectSidebar) Render() ui.Buffer {
 			style.Foreground = theme.PROJECT_SIDEBAR_SELECTED_FG
 		}
 
+		lineBuffer := ui.Buffer{}
+		lineBuffer.Resize(c.Width, 1)
+		lineBuffer.FillStyle(style)
+		b.DrawBuffer(0, i, lineBuffer)
+
 		projectText := project.GetName()
 		projectText = strings.TrimPrefix(projectText, "project-")
 		b.Text(1, i, projectText, style)
