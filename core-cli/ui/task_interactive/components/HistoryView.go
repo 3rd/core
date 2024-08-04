@@ -5,6 +5,7 @@ import (
 	"core/ui/task_interactive/theme"
 	"fmt"
 	"strings"
+	"time"
 
 	ui "github.com/3rd/go-futui"
 )
@@ -26,25 +27,48 @@ func (c *HistoryView) Render() ui.Buffer {
 
 	for i := c.AppState.HistoryEntryOffset; i < len(historyEntries) && yOffset < c.Height; i++ {
 		entry := historyEntries[i]
-		dateStr := entry.Date.Format("2006-01-02")
-		b.Text(1, yOffset, dateStr, ui.Style{Foreground: theme.HISTORY_DATE_FG})
+		dayStart := time.Date(entry.Date.Year(), entry.Date.Month(), entry.Date.Day(), 0, 0, 0, 0, time.Local)
+		dayEnd := time.Date(entry.Date.Year(), entry.Date.Month(), entry.Date.Day()+1, 0, 0, 0, 0, time.Local)
+		dayWorkTime := time.Duration(0)
+
+		// skip 1, will write the date and total work time at the end
+		dateYOffset := yOffset
 		yOffset++
 
+		// tasks
 		for _, task := range entry.Tasks {
 			if yOffset >= c.Height {
 				break
 			}
 
+			// project
 			projectName := ""
 			if task.Node != nil {
 				projectName = task.Node.GetName()
 				projectName = strings.TrimPrefix(projectName, "project-")
 			}
-
 			b.Text(0, yOffset, fmt.Sprintf("  ▕%s: ", projectName), ui.Style{Foreground: theme.HISTORY_PROJECT_FG})
+
+			// task
 			b.Text(7+len(projectName), yOffset, task.Text, ui.Style{Foreground: theme.HISTORY_TASK_FG})
+
+			// work time
+			taskWorkTime := time.Duration(0)
+			for _, session := range task.Sessions {
+				if session.End.After(dayStart) && session.Start.Before(dayEnd) {
+					taskWorkTime += session.Duration()
+				}
+			}
+			dayWorkTime += taskWorkTime
+			b.Text(8+len(projectName)+len(task.Text), yOffset, fmt.Sprintf("(%s)", taskWorkTime), ui.Style{Foreground: theme.TASK_DONE_FG})
+
 			yOffset++
 		}
+
+		// date & work time
+		dateStr := dayStart.Format("2006-01-02")
+		b.Text(1, dateYOffset, dateStr, ui.Style{Foreground: theme.HISTORY_DATE_FG})
+		b.Text(2+len(dateStr), dateYOffset, fmt.Sprintf("(%s)", dayWorkTime), ui.Style{Foreground: theme.TASK_DONE_FG})
 
 		if yOffset < c.Height {
 			yOffset++
