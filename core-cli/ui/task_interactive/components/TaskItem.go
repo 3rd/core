@@ -122,7 +122,8 @@ func (c *TaskItem) Render() ui.Buffer {
 	b.DrawBuffer(c.Width-reward.Width()-1, 0, reward)
 
 	// duration
-	workTime := c.Task.GetTotalSessionTime()
+	now := time.Now()
+	workTime := c.Task.GetTotalSessionTimeForDate(now)
 	if workTime > 0 {
 		duration := ui.Buffer{}
 		durationText := workTime.Round(time.Second).String()

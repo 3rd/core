@@ -123,6 +123,18 @@ func (t *Task) GetTotalSessionTime() time.Duration {
 	return duration
 }
 
+func (t *Task) GetTotalSessionTimeForDate(date time.Time) time.Duration {
+	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	dayEnd := time.Date(date.Year(), date.Month(), date.Day()+1, 0, 0, 0, 0, date.Location())
+	duration := time.Duration(0)
+	for _, session := range t.Sessions {
+		if session.End == nil || (session.Start.After(dayStart) && session.End.Before(dayEnd)) {
+			duration += session.Duration()
+		}
+	}
+	return duration
+}
+
 func (t *Task) GetTotalSessionTimeDeep() time.Duration {
 	duration := t.GetTotalSessionTime()
 	for _, child := range t.Children {

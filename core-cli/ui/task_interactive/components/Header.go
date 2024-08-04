@@ -76,8 +76,9 @@ func (c *Header) Render() ui.Buffer {
 	// compute total work time and reward points
 	totalWorkTime := time.Duration(0)
 	totalRewardPoints := 0
+	now := time.Now()
 	for _, t := range c.AppState.ActiveTasks {
-		totalWorkTime += t.GetTotalSessionTime()
+		totalWorkTime += t.GetTotalSessionTimeForDate(now)
 		if t.Status == wiki.TASK_STATUS_DONE {
 			totalRewardPoints += utils.ComputeTaskReward(t)
 		}
