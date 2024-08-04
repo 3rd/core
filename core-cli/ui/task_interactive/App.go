@@ -194,13 +194,35 @@ func (app *App) handleActiveToggleInProgress() {
 		for i := 0; i <= getIndentLevel(task); i++ {
 			st = INDENT + st
 		}
+
+		deletePreviousSession := false
+		var previousSession *wiki.TaskSession
+		for _, session := range task.Sessions {
+			if session.End == nil {
+				break
+			}
+			previousSession = &session
+		}
+		if previousSession != nil && previousSession.End != nil &&
+			previousSession.Start.Year() == now.Year() &&
+			previousSession.Start.Month() == now.Month() &&
+			previousSession.Start.Day() == now.Day() &&
+			previousSession.Start.Hour() == now.Hour() &&
+			previousSession.Start.Minute() == now.Minute() {
+			deletePreviousSession = true
+		}
+
 		lines[lastWorkSession.LineNumber] = st
+		if deletePreviousSession {
+			lines = append(lines[:previousSession.LineNumber], lines[previousSession.LineNumber+1:]...)
+		}
 	} else {
-		// start new session
+		// create new session
 		st := fmt.Sprintf("Session: %04d.%02d.%02d %02d:%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute())
 		for i := 0; i <= getIndentLevel(task); i++ {
 			st = INDENT + st
 		}
+
 		i := task.LineNumber + 1
 		lastWorkSession := task.GetLastSession()
 		if lastWorkSession != nil {
@@ -208,6 +230,7 @@ func (app *App) handleActiveToggleInProgress() {
 		} else if task.Schedule != nil {
 			i = task.Schedule.LineNumber + 1
 		}
+
 		lines = append(lines, "")
 		copy(lines[i+1:], lines[i:])
 		lines[i] = st
