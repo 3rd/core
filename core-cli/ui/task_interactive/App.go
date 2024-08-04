@@ -499,22 +499,22 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 		case '1':
 			app.state.CurrentTab = state.APP_TAB_ACTIVE
 		case '2':
-			app.state.CurrentTab = state.APP_TAB_HISTORY
-		case '3':
 			app.state.CurrentTab = state.APP_TAB_PROJECTS
+		case '3':
+			app.state.CurrentTab = state.APP_TAB_HISTORY
 		case 'q':
 			switch app.state.CurrentTab {
 			case state.APP_TAB_PROJECTS:
-				app.state.CurrentTab = state.APP_TAB_HISTORY
-			case state.APP_TAB_HISTORY:
 				app.state.CurrentTab = state.APP_TAB_ACTIVE
+			case state.APP_TAB_HISTORY:
+				app.state.CurrentTab = state.APP_TAB_PROJECTS
 			}
 		case 'w':
 			switch app.state.CurrentTab {
 			case state.APP_TAB_ACTIVE:
-				app.state.CurrentTab = state.APP_TAB_HISTORY
-			case state.APP_TAB_HISTORY:
 				app.state.CurrentTab = state.APP_TAB_PROJECTS
+			case state.APP_TAB_PROJECTS:
+				app.state.CurrentTab = state.APP_TAB_HISTORY
 			}
 		}
 	}

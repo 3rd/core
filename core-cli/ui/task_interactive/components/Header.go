@@ -121,18 +121,18 @@ func (c *Header) Render() ui.Buffer {
 		tabsBuffer.Text(0, 0, activeTab, inactiveTabStyle)
 	}
 
-	historyTab := " (2) History "
-	if c.AppState.CurrentTab == state.APP_TAB_HISTORY {
-		tabsBuffer.Text(len(activeTab), 0, historyTab, activeTabStyle)
+	projectsTab := " (2) Projects "
+	if c.AppState.CurrentTab == state.APP_TAB_PROJECTS {
+		tabsBuffer.Text(len(activeTab), 0, projectsTab, activeTabStyle)
 	} else {
-		tabsBuffer.Text(len(activeTab), 0, historyTab, inactiveTabStyle)
+		tabsBuffer.Text(len(activeTab), 0, projectsTab, inactiveTabStyle)
 	}
 
-	projectsTab := " (3) Projects "
-	if c.AppState.CurrentTab == state.APP_TAB_PROJECTS {
-		tabsBuffer.Text(len(activeTab)+len(historyTab), 0, projectsTab, activeTabStyle)
+	historyTab := " (3) History "
+	if c.AppState.CurrentTab == state.APP_TAB_HISTORY {
+		tabsBuffer.Text(len(activeTab)+len(projectsTab), 0, historyTab, activeTabStyle)
 	} else {
-		tabsBuffer.Text(len(activeTab)+len(historyTab), 0, projectsTab, inactiveTabStyle)
+		tabsBuffer.Text(len(activeTab)+len(projectsTab), 0, historyTab, inactiveTabStyle)
 	}
 
 	b.DrawBuffer(c.Width/2-tabsBuffer.Width()/2, 1, tabsBuffer)
