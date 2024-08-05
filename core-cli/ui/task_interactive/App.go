@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -96,11 +98,36 @@ func (app *App) Setup() {
 
 func (app *App) loadTasks() {
 	getTasksResult := app.providers.GetTasks()
-	app.state.Nodes = getTasksResult.Nodes
 	app.state.Tasks = getTasksResult.Tasks
 	app.state.ActiveTasks = getTasksResult.ActiveTasks
 	app.state.LongestActiveProjectLength = getTasksResult.LongestActiveProjectLength
 	app.state.LongestProjectLength = getTasksResult.LongestProjectLength
+
+	// sort projects
+	sortedNodes := getTasksResult.Nodes
+	sort.Slice(sortedNodes, func(i, j int) bool {
+		aMeta := sortedNodes[i].GetMeta()
+		bMeta := sortedNodes[j].GetMeta()
+		if aMeta != nil && bMeta != nil {
+			aPriority, err := strconv.Atoi(aMeta["priority"])
+			if err != nil {
+				aPriority = 0
+			}
+			bPriority, err := strconv.Atoi(bMeta["priority"])
+			if err != nil {
+				bPriority = 0
+			}
+
+			if aPriority != bPriority {
+				return aPriority > bPriority
+			}
+		}
+
+		aName := strings.TrimPrefix(strings.ToLower(sortedNodes[i].GetName()), "project-")
+		bName := strings.TrimPrefix(strings.ToLower(sortedNodes[j].GetName()), "project-")
+		return strings.Compare(aName, bName) < 0
+	})
+	app.state.Nodes = sortedNodes
 
 	// guard out of bounds
 	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
