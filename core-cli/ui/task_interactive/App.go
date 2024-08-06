@@ -618,6 +618,10 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 				app.handleProjectsTaskNavigation(true)
 			case 'k':
 				app.handleProjectsTaskNavigation(false)
+			case 'J':
+				app.handleProjectsNavigation(true)
+			case 'K':
+				app.handleProjectsNavigation(false)
 			case ' ':
 				app.handleProjectsToggleTask()
 			}
