@@ -54,16 +54,9 @@ func (c *TaskItem) Render() ui.Buffer {
 	}
 
 	if c.Selected {
-
-		if c.Task.IsInProgress() {
-			taskStyle.Background = theme.TASK_CURRENT_SELECTED_BG
-			taskStyle.Foreground = theme.TASK_CURRENT_SELECTED_FG
-			projectStyle.Background = taskStyle.Background.Darken(0.05)
-		} else {
-			taskStyle.Background = theme.TASK_SELECTED_BG
-			taskStyle.Foreground = theme.TASK_SELECTED_FG
-			projectStyle.Background = taskStyle.Background.Darken(0.05)
-		}
+		taskStyle.Background = taskStyle.Background.Lighten(0.1)
+		taskStyle.Foreground = taskStyle.Foreground.Lighten(0.2)
+		projectStyle.Background = taskStyle.Background.Darken(0.05)
 	}
 
 	checkmarkStyle := taskStyle

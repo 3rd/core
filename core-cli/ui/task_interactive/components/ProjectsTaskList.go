@@ -33,8 +33,8 @@ func (c *ProjectTaskList) Render() ui.Buffer {
 			style.Foreground = theme.PROJECTS_TASK_ACTIVE_FG
 		}
 		if taskIndex == c.AppState.ProjectsTaskSelectedIndex {
-			style.Background = theme.TASK_SELECTED_BG
-			style.Foreground = theme.TASK_SELECTED_FG
+			style.Background = style.Background.Lighten(0.1)
+			style.Foreground = style.Foreground.Lighten(0.2)
 		}
 
 		// line
