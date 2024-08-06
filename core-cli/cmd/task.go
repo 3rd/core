@@ -243,15 +243,7 @@ var taskInteractiveCommand = &cobra.Command{
 				a := activeTasks[i]
 				b := activeTasks[j]
 
-				// top: sticky
-				if b.Priority >= 100 {
-					return false
-				}
-				if a.Priority >= 100 {
-					return true
-				}
-
-				// middle: done
+				// move done to the top
 				if b.Status == wiki.TASK_STATUS_DONE && a.Status != wiki.TASK_STATUS_DONE {
 					return false
 				}
