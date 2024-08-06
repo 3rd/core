@@ -452,18 +452,24 @@ func (app *App) handleProjectsEdit() {
 		return
 	}
 
-	task := app.state.GetCurrentProjectTasks()[app.state.ProjectsTaskSelectedIndex]
-	if task == nil {
-		return
-	}
+	editorArgs := []string{}
 
-	node := task.Node.(*localWiki.LocalNode)
+	tasks := app.state.GetCurrentProjectTasks()
+	if len(tasks) > 0 {
+		task := app.state.GetCurrentProjectTasks()[app.state.ProjectsTaskSelectedIndex]
+		if task == nil {
+			return
+		}
+		editorArgs = append(editorArgs, fmt.Sprintf("+%d", task.LineNumber+1))
+	}
 
 	initialMode := app.state.ActiveMode
 	app.state.ActiveMode = state.APP_ACTIVE_MODE_EDITOR
 
 	app.Screen.Suspend()
-	cmd := exec.Command("nvim", fmt.Sprintf("+%d", task.LineNumber+1), node.GetPath(), "+norm zz", "+norm zv")
+	editorArgs = append(editorArgs, project.(*localWiki.LocalNode).GetPath())
+	editorArgs = append(editorArgs, "+norm zz")
+	cmd := exec.Command("nvim", editorArgs...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
