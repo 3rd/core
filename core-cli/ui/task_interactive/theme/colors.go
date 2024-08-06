@@ -19,17 +19,18 @@ var (
 	TAB_INACTIVE_FG  ui.Color = "#A5A0BA"
 
 	// tasks
-	TASK_BG               ui.Color = "#4B475C"
-	TASK_FG               ui.Color = "#C5C2D6"
-	TASK_DONE_BG          ui.Color = "#383545"
-	TASK_DONE_FG          ui.Color = "#827d98"
-	TASK_CURRENT_BG       ui.Color = "#7a0891"
-	TASK_CURRENT_FG       ui.Color = TASK_CURRENT_BG.OptimalForeground()
-	TASK_REWARD_FG        ui.Color = "#ffaa00"
-	TASK_STICKY_REWARD_FG ui.Color = "#ee4422"
-	PROJECT_FG            ui.Color = "#E8AB0F"
-	PROJECT_DONE_FG       ui.Color = "#746f8c"
-	TASK_LABEL_FG         ui.Color = "#f069cb"
+	TASK_BG                ui.Color = "#4B475C"
+	TASK_FG                ui.Color = "#C5C2D6"
+	TASK_DONE_BG           ui.Color = "#383545"
+	TASK_DONE_FG           ui.Color = "#827d98"
+	TASK_CURRENT_BG        ui.Color = "#7a0891"
+	TASK_CURRENT_FG        ui.Color = TASK_CURRENT_BG.OptimalForeground()
+	TASK_REWARD_DEFAULT_FG ui.Color = "#ffaa00"
+	TASK_REWARD_MEDIUM_FG  ui.Color = "#f26c0d"
+	TASK_REWARD_HIGH_FG    ui.Color = "#f2330d"
+	PROJECT_FG             ui.Color = "#E8AB0F"
+	PROJECT_DONE_FG        ui.Color = "#746f8c"
+	TASK_LABEL_FG          ui.Color = "#f069cb"
 
 	// history
 	HISTORY_DATE_FG    ui.Color = "#E8AB0F"

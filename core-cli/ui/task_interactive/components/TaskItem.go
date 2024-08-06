@@ -31,12 +31,15 @@ func (c *TaskItem) Render() ui.Buffer {
 	// styles
 	taskStyle := ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG}
 	projectStyle := taskStyle
-	rewardStyle := ui.Style{Foreground: theme.TASK_REWARD_FG}
 	projectStyle.Background = taskStyle.Background.Darken(0.05)
 	projectStyle.Foreground = theme.PROJECT_FG
 
+	rewardStyle := ui.Style{Foreground: theme.TASK_REWARD_DEFAULT_FG}
+	if taskReward > 10 {
+		rewardStyle.Foreground = theme.TASK_REWARD_MEDIUM_FG
+	}
 	if taskReward >= 100 {
-		rewardStyle.Foreground = theme.TASK_STICKY_REWARD_FG
+		rewardStyle.Foreground = theme.TASK_REWARD_HIGH_FG
 	}
 
 	if c.Task.IsInProgress() {
@@ -44,7 +47,7 @@ func (c *TaskItem) Render() ui.Buffer {
 		taskStyle.Foreground = theme.TASK_CURRENT_FG
 		projectStyle.Background = taskStyle.Background.Darken(0.05)
 		projectStyle.Foreground = projectStyle.Foreground.Lighten(0.1)
-		rewardStyle.Foreground = projectStyle.Foreground
+		rewardStyle.Foreground = rewardStyle.Foreground.Lighten(0.2)
 	} else if c.Task.Status == wiki.TASK_STATUS_DONE {
 		taskStyle.Background = theme.TASK_DONE_BG
 		taskStyle.Foreground = theme.TASK_DONE_FG
