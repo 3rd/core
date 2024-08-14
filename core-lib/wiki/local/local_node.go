@@ -182,3 +182,7 @@ func (n *LocalNode) GetTasks() []*wiki.Task {
 	}
 	return tasks
 }
+
+func (n *LocalNode) ToMarkdown() string {
+	return n.document.ToMarkdown()
+}

@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	wikivfs "core/vfs/wiki-vfs"
 	"fmt"
+	"log"
 	"path/filepath"
 
 	local_wiki "github.com/3rd/core/core-lib/wiki/local"
+	"github.com/radovskyb/watcher"
 	"github.com/spf13/cobra"
 )
 
@@ -112,6 +115,62 @@ var wikiResolveCommand = &cobra.Command{
 	},
 }
 
+var wikiMountCommand = &cobra.Command{
+	Use:   "mount",
+	Short: "mount wiki vfs",
+	Run: func(cmd *cobra.Command, args []string) {
+		root := env.WIKI_ROOT
+		if len(root) == 0 {
+			panic("WIKI_ROOT not set")
+		}
+
+		mountPoint, err := cmd.Flags().GetString("mount")
+		if err != nil {
+			panic(err)
+		}
+
+		// get wiki
+		wikiInstance, err := local_wiki.NewLocalWiki(local_wiki.LocalWikiConfig{
+			Root:  root,
+			Parse: "none",
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		// setup watcher
+		w := watcher.New()
+		w.FilterOps(watcher.Create, watcher.Move, watcher.Remove, watcher.Write)
+
+		go func() {
+			for {
+				select {
+				case <-w.Event:
+					wikiInstance.Reload()
+				case err := <-w.Error:
+					log.Fatalln(err)
+				case <-w.Closed:
+					return
+				}
+			}
+		}()
+		if err := w.AddRecursive(root); err != nil {
+			log.Fatalln(err)
+		}
+
+		// mount
+		vfs, err := wikivfs.NewWikiVFS(wikiInstance, root, mountPoint)
+		if err != nil {
+			panic(err)
+		}
+		defer vfs.Close()
+		err = vfs.Mount()
+		if err != nil {
+			panic(err)
+		}
+	},
+}
+
 func init() {
 	cmd := &cobra.Command{Use: "wiki"}
 
@@ -121,6 +180,9 @@ func init() {
 
 	wikiResolveCommand.Flags().Bool("strict", false, "will not return the default would-be path for if the node is not found")
 	cmd.AddCommand(wikiResolveCommand)
+
+	wikiMountCommand.Flags().String("mount", "/tmp/wiki", "mount point")
+	cmd.AddCommand(wikiMountCommand)
 
 	rootCmd.AddCommand(cmd)
 }

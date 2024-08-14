@@ -9,6 +9,7 @@ replace github.com/3rd/syslang/go-syslang => ../syslang/go-syslang
 replace github.com/3rd/go-futui => ../go-futui
 
 require (
+	bazil.org/fuse v0.0.0-20230120002735-62a210ff1fd5
 	github.com/3rd/core/core-lib v0.0.0
 	github.com/3rd/go-futui v0.0.0-20240720131722-26cf9e0a36db
 	github.com/gdamore/tcell/v2 v2.7.4
@@ -30,7 +31,7 @@ require (
 	github.com/smacker/go-tree-sitter v0.0.0-20240625050157-a31a98a7c0f6 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/teacat/noire v1.1.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/text v0.17.0 // indirect
 )
