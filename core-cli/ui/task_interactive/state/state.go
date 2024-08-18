@@ -11,13 +11,18 @@ type APP_TAB string
 type APP_ACTIVE_MODE string
 
 const (
-	APP_TAB_ACTIVE   APP_TAB = ""
-	APP_TAB_HISTORY  APP_TAB = "history"
-	APP_TAB_PROJECTS APP_TAB = "projects"
-
+	APP_TAB_ACTIVE          APP_TAB         = ""
+	APP_TAB_HISTORY         APP_TAB         = "history"
+	APP_TAB_PROJECTS        APP_TAB         = "projects"
 	APP_ACTIVE_MODE_DEFAULT APP_ACTIVE_MODE = ""
 	APP_ACTIVE_MODE_EDITOR  APP_ACTIVE_MODE = "editor"
+
+	NOTIFICATION_DURATION = 5 * time.Second
 )
+
+type Notification struct {
+	Message string
+}
 
 type HistoryEntry struct {
 	Date  time.Time
@@ -30,6 +35,8 @@ type AppState struct {
 	Tasks        []*wiki.Task
 	ActiveTasks  []*wiki.Task
 	HeaderHeight int
+	// notification
+	Notification *Notification
 	// active
 	LongestActiveProjectLength int
 	ActiveMode                 APP_ACTIVE_MODE

@@ -16,6 +16,7 @@ import (
 	"github.com/3rd/core/core-lib/wiki"
 	localWiki "github.com/3rd/core/core-lib/wiki/local"
 	ui "github.com/3rd/go-futui"
+	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/radovskyb/watcher"
 )
@@ -171,6 +172,18 @@ func (app *App) loadTasks() {
 	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
 		app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
 	}
+}
+
+func (app *App) showNotification(message string) {
+	app.state.Notification = &state.Notification{Message: message}
+	app.Update()
+
+	time.AfterFunc(state.NOTIFICATION_DURATION, func() {
+		if app.state.Notification != nil && app.state.Notification.Message == message {
+			app.state.Notification = nil
+			app.Update()
+		}
+	})
 }
 
 func (app *App) handleActiveNavigateDown() {
@@ -635,6 +648,30 @@ func (app *App) handleNavigateBottom() {
 	app.Update()
 }
 
+func (app *App) handleYank() {
+	var taskText string
+	switch app.state.CurrentTab {
+	case state.APP_TAB_ACTIVE:
+		if app.state.ActiveSelectedIndex < len(app.state.ActiveTasks) {
+			taskText = app.state.ActiveTasks[app.state.ActiveSelectedIndex].Text
+		}
+	case state.APP_TAB_PROJECTS:
+		tasks := app.state.GetCurrentProjectTasks()
+		if app.state.ProjectsTaskSelectedIndex < len(tasks) {
+			taskText = tasks[app.state.ProjectsTaskSelectedIndex].Text
+		}
+	}
+
+	if taskText != "" {
+		err := clipboard.WriteAll(taskText)
+		if err == nil {
+			app.showNotification("Copied task to clipboard")
+		} else {
+			app.showNotification("Failed to copy task to clipboard")
+		}
+	}
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
 	switch ev.Key() {
 	case tcell.KeyRune:
@@ -665,6 +702,8 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			app.handleNavigateTop()
 		case 'G':
 			app.handleNavigateBottom()
+		case 'y':
+			app.handleYank()
 		}
 	}
 

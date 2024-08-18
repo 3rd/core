@@ -137,5 +137,14 @@ func (c *Header) Render() ui.Buffer {
 	}
 
 	b.DrawBuffer(c.Width/2-tabsBuffer.Width()/2, 1, tabsBuffer)
+
+	// notification
+	if c.AppState.Notification != nil {
+		notificationStyle := ui.Style{Foreground: theme.TASK_LABEL_FG}
+		notificationBuffer := ui.Buffer{}
+		notificationBuffer.Text(0, 0, c.AppState.Notification.Message, notificationStyle)
+		b.DrawBuffer(c.Width/2-notificationBuffer.Width()/2, 2, notificationBuffer)
+	}
+
 	return b
 }
