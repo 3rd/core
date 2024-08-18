@@ -42,7 +42,7 @@ type AppState struct {
 	ProjectSelectedIndex      int
 	ProjectScrollOffset       int
 	ProjectsTaskSelectedIndex int
-	TaskScrollOffset          int
+	ProjectsTaskScrollOffset  int
 }
 
 func (app *AppState) GetLongestTaskLength() int {

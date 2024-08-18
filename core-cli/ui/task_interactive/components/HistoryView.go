@@ -25,6 +25,11 @@ func (c *HistoryView) Render() ui.Buffer {
 	yOffset := 0
 	historyEntries := c.AppState.GetHistoryEntries()
 
+	// when offset is -1, set it to the bottom offset
+	if c.AppState.HistoryEntryOffset == -1 {
+		c.AppState.HistoryEntryOffset = len(historyEntries) - 1
+	}
+
 	for i := c.AppState.HistoryEntryOffset; i < len(historyEntries) && yOffset < c.Height; i++ {
 		entry := historyEntries[i]
 		dayWorkTime := time.Duration(0)

@@ -22,7 +22,7 @@ func (c *ProjectTaskList) Render() ui.Buffer {
 
 	tasks := c.AppState.GetCurrentProjectTasks()
 	for i := 0; i < c.Height; i++ {
-		taskIndex := i + c.AppState.TaskScrollOffset
+		taskIndex := i + c.AppState.ProjectsTaskScrollOffset
 		if taskIndex >= len(tasks) {
 			break
 		}

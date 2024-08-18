@@ -12,9 +12,10 @@ import (
 
 type ProjectSidebar struct {
 	ui.Component
-	AppState *state.AppState
-	Width    int
-	Height   int
+	AppState     *state.AppState
+	Width        int
+	Height       int
+	ScrollOffset int
 }
 
 func (c *ProjectSidebar) Render() ui.Buffer {
@@ -23,12 +24,8 @@ func (c *ProjectSidebar) Render() ui.Buffer {
 
 	var entries []string
 	longestTextLength := 0
-	for i := 0; i < c.Height; i++ {
-		projectIndex := i + c.AppState.ProjectScrollOffset
-		if projectIndex >= len(c.AppState.Nodes) {
-			break
-		}
-		project := c.AppState.Nodes[projectIndex]
+	for i := c.ScrollOffset; i < len(c.AppState.Nodes) && i-c.ScrollOffset < c.Height; i++ {
+		project := c.AppState.Nodes[i]
 		tasks := []*wiki.Task{}
 		for _, task := range project.GetTasks() {
 			if task.Status == wiki.TASK_STATUS_DEFAULT || task.Status == wiki.TASK_STATUS_ACTIVE {
@@ -51,13 +48,10 @@ func (c *ProjectSidebar) Render() ui.Buffer {
 	b.Resize(width, c.Height)
 	b.FillStyle(ui.Style{Background: theme.PROJECT_SIDEBAR_BG, Foreground: theme.PROJECT_SIDEBAR_FG})
 
-	for i := 0; i < c.Height; i++ {
-		if i >= len(entries) {
-			break
-		}
+	for i := 0; i < c.Height && i < len(entries); i++ {
 		entry := entries[i]
 		style := ui.Style{Background: theme.PROJECT_SIDEBAR_BG, Foreground: theme.PROJECT_SIDEBAR_FG}
-		if i == c.AppState.ProjectSelectedIndex {
+		if i+c.ScrollOffset == c.AppState.ProjectSelectedIndex {
 			style.Background = theme.PROJECT_SIDEBAR_SELECTED_BG
 			style.Foreground = theme.PROJECT_SIDEBAR_SELECTED_FG
 		}

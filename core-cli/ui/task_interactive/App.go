@@ -157,7 +157,6 @@ func (app *App) loadTasks() {
 			}
 
 			// by name otherwise
-			log.Printf("aName: %s, bName: %s", aName, bName)
 			return strings.Compare(aName, bName) < 0
 		}
 
@@ -175,34 +174,42 @@ func (app *App) loadTasks() {
 }
 
 func (app *App) handleActiveNavigateDown() {
-	// select task
-	i := app.state.ActiveSelectedIndex
-	if i >= len(app.state.ActiveTasks)-1 {
+	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks)-1 {
 		return
 	}
-	i = i + 1
-	app.state.ActiveSelectedIndex = i
-	// scroll
-	_, h := app.Screen.Size()
-	if i >= h-2+app.state.ActiveScrollOffset {
-		app.state.ActiveScrollOffset++
-	}
+	app.state.ActiveSelectedIndex++
+	app.adjustActiveScroll()
 	app.Update()
 }
 
 func (app *App) handleActiveNavigateUp() {
-	// select task
-	i := app.state.ActiveSelectedIndex
-	if i <= 0 {
+	if app.state.ActiveSelectedIndex <= 0 {
 		return
 	}
-	i = i - 1
-	app.state.ActiveSelectedIndex = i
-	// scroll
-	if i < app.state.ActiveScrollOffset {
-		app.state.ActiveScrollOffset--
-	}
+	app.state.ActiveSelectedIndex--
+	app.adjustActiveScroll()
 	app.Update()
+}
+
+func (app *App) adjustActiveScroll() {
+	maxVisibleTasks := app.Height() - app.state.HeaderHeight
+	if maxVisibleTasks <= 0 {
+		return // Prevent division by zero or negative values
+	}
+	maxScrollOffset := len(app.state.ActiveTasks) - maxVisibleTasks
+	if maxScrollOffset < 0 {
+		maxScrollOffset = 0
+	}
+
+	if app.state.ActiveSelectedIndex < app.state.ActiveScrollOffset {
+		app.state.ActiveScrollOffset = app.state.ActiveSelectedIndex
+	} else if app.state.ActiveSelectedIndex >= app.state.ActiveScrollOffset+maxVisibleTasks {
+		app.state.ActiveScrollOffset = app.state.ActiveSelectedIndex - maxVisibleTasks + 1
+	}
+
+	if app.state.ActiveScrollOffset > maxScrollOffset {
+		app.state.ActiveScrollOffset = maxScrollOffset
+	}
 }
 
 func (app *App) handleHistoryScrollDown() {
@@ -463,9 +470,19 @@ func (app *App) handleProjectsNavigation(forward bool) {
 			app.state.ProjectSelectedIndex--
 		}
 	}
-	app.projectsAdjustSidebarScroll()
+	app.adjustProjectsSidebarScroll()
 	app.state.ProjectsTaskSelectedIndex = 0
-	app.state.TaskScrollOffset = 0
+	app.state.ProjectsTaskScrollOffset = 0
+	app.Update()
+}
+
+func (app *App) adjustProjectsSidebarScroll() {
+	maxVisibleProjects := app.Height() - app.state.HeaderHeight
+	if app.state.ProjectSelectedIndex < app.state.ProjectScrollOffset {
+		app.state.ProjectScrollOffset = app.state.ProjectSelectedIndex
+	} else if app.state.ProjectSelectedIndex >= app.state.ProjectScrollOffset+maxVisibleProjects {
+		app.state.ProjectScrollOffset = app.state.ProjectSelectedIndex - maxVisibleProjects + 1
+	}
 }
 
 func (app *App) handleProjectsTaskNavigation(down bool) {
@@ -546,14 +563,14 @@ func (app *App) projectsAdjustTaskScroll() {
 		maxScrollOffset = 0
 	}
 
-	if app.state.ProjectsTaskSelectedIndex < app.state.TaskScrollOffset {
-		app.state.TaskScrollOffset = app.state.ProjectsTaskSelectedIndex
-	} else if app.state.ProjectsTaskSelectedIndex >= app.state.TaskScrollOffset+maxVisibleTasks {
-		app.state.TaskScrollOffset = app.state.ProjectsTaskSelectedIndex - maxVisibleTasks + 1
+	if app.state.ProjectsTaskSelectedIndex < app.state.ProjectsTaskScrollOffset {
+		app.state.ProjectsTaskScrollOffset = app.state.ProjectsTaskSelectedIndex
+	} else if app.state.ProjectsTaskSelectedIndex >= app.state.ProjectsTaskScrollOffset+maxVisibleTasks {
+		app.state.ProjectsTaskScrollOffset = app.state.ProjectsTaskSelectedIndex - maxVisibleTasks + 1
 	}
 
-	if app.state.TaskScrollOffset > maxScrollOffset {
-		app.state.TaskScrollOffset = maxScrollOffset
+	if app.state.ProjectsTaskScrollOffset > maxScrollOffset {
+		app.state.ProjectsTaskScrollOffset = maxScrollOffset
 	}
 }
 
@@ -585,6 +602,39 @@ func (app *App) handleProjectsToggleTask() {
 	out.WriteString(strings.Join(lines, "\n"))
 }
 
+func (app *App) handleNavigateTop() {
+	switch app.state.CurrentTab {
+	case state.APP_TAB_ACTIVE:
+		app.state.ActiveScrollOffset = 0
+		app.state.ActiveSelectedIndex = 0
+	case state.APP_TAB_HISTORY:
+		app.state.HistoryEntryOffset = 0
+	case state.APP_TAB_PROJECTS:
+		app.state.ProjectsTaskSelectedIndex = 0
+		app.state.ProjectsTaskScrollOffset = 0
+	}
+	app.Update()
+}
+
+func (app *App) handleNavigateBottom() {
+	switch app.state.CurrentTab {
+	case state.APP_TAB_ACTIVE:
+		if len(app.state.ActiveTasks) > 0 {
+			app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
+			app.adjustActiveScroll()
+		}
+	case state.APP_TAB_HISTORY:
+		app.state.HistoryEntryOffset = -1
+	case state.APP_TAB_PROJECTS:
+		tasks := app.state.GetCurrentProjectTasks()
+		if len(tasks) > 0 {
+			app.state.ProjectsTaskSelectedIndex = len(tasks) - 1
+			app.projectsAdjustTaskScroll()
+		}
+	}
+	app.Update()
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
 	switch ev.Key() {
 	case tcell.KeyRune:
@@ -611,6 +661,10 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			case state.APP_TAB_PROJECTS:
 				app.state.CurrentTab = state.APP_TAB_HISTORY
 			}
+		case 'g':
+			app.handleNavigateTop()
+		case 'G':
+			app.handleNavigateBottom()
 		}
 	}
 
@@ -701,6 +755,11 @@ func (app *App) Render() ui.Buffer {
 	headerBuffer := b.DrawComponent(0, 0, &header)
 	app.state.HeaderHeight = headerBuffer.Height()
 
+	// guard min height
+	if app.Height() <= app.state.HeaderHeight {
+		return b
+	}
+
 	// active tab
 	if app.state.CurrentTab == state.APP_TAB_ACTIVE {
 		taskList := components.TaskList{
@@ -708,17 +767,10 @@ func (app *App) Render() ui.Buffer {
 			Width:                app.Width(),
 			LongestProjectLength: app.state.LongestActiveProjectLength,
 			SelectedIndex:        app.state.ActiveSelectedIndex,
+			ScrollOffset:         app.state.ActiveScrollOffset,
+			MaxHeight:            app.Height() - app.state.HeaderHeight,
 		}
 		b.DrawComponent(0, headerBuffer.Height(), &taskList)
-
-		// guard max scroll
-		maxScroll := len(app.state.ActiveTasks) - app.Height() + headerBuffer.Height()
-		if maxScroll < 0 {
-			maxScroll = 0
-		}
-		if app.state.ActiveScrollOffset > maxScroll {
-			app.state.ActiveScrollOffset = maxScroll
-		}
 	}
 
 	// history tab
@@ -734,9 +786,10 @@ func (app *App) Render() ui.Buffer {
 	// projects tab
 	if app.state.CurrentTab == state.APP_TAB_PROJECTS {
 		projectSidebar := components.ProjectSidebar{
-			AppState: &app.state,
-			Width:    app.state.LongestProjectLength + 2,
-			Height:   app.Height() - headerBuffer.Height(),
+			AppState:     &app.state,
+			Width:        app.state.LongestProjectLength + 2,
+			Height:       app.Height() - headerBuffer.Height(),
+			ScrollOffset: app.state.ProjectScrollOffset,
 		}
 		b.DrawComponent(0, headerBuffer.Height(), &projectSidebar)
 

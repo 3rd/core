@@ -11,13 +11,16 @@ type TaskList struct {
 	Width                int
 	SelectedIndex        int
 	LongestProjectLength int
+	ScrollOffset         int
+	MaxHeight            int
 }
 
 func (c *TaskList) Render() ui.Buffer {
 	b := ui.Buffer{}
 	voffset := 0
 
-	for i, task := range c.Tasks {
+	for i := c.ScrollOffset; i < len(c.Tasks) && voffset < c.MaxHeight; i++ {
+		task := c.Tasks[i]
 		taskComponent := TaskItem{
 			Task:                 task,
 			Width:                c.Width,
@@ -26,7 +29,7 @@ func (c *TaskList) Render() ui.Buffer {
 		}
 
 		b.DrawComponent(0, voffset, &taskComponent)
-		voffset = b.Height()
+		voffset++
 	}
 
 	return b
