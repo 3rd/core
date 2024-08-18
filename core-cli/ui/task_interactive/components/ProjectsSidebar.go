@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/3rd/core/core-lib/wiki"
 	ui "github.com/3rd/go-futui"
 )
 
@@ -28,10 +29,16 @@ func (c *ProjectSidebar) Render() ui.Buffer {
 			break
 		}
 		project := c.AppState.Nodes[projectIndex]
+		tasks := []*wiki.Task{}
+		for _, task := range project.GetTasks() {
+			if task.Status != wiki.TASK_STATUS_DONE && task.Status != wiki.TASK_STATUS_CANCELLED {
+				tasks = append(tasks, task)
+			}
+		}
 
 		projectName := project.GetName()
 		projectName = strings.TrimPrefix(projectName, "project-")
-		entry := fmt.Sprintf("%s (%d)", projectName, len(project.GetTasks()))
+		entry := fmt.Sprintf("%s (%d)", projectName, len(tasks))
 
 		if len(entry) > longestTextLength {
 			longestTextLength = len(entry)
