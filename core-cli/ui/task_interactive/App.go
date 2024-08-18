@@ -108,7 +108,32 @@ func (app *App) loadTasks() {
 	sort.Slice(sortedNodes, func(i, j int) bool {
 		aMeta := sortedNodes[i].GetMeta()
 		bMeta := sortedNodes[j].GetMeta()
+
 		if aMeta != nil && bMeta != nil {
+			aName := sortedNodes[i].GetName()
+			bName := sortedNodes[j].GetName()
+
+			// projects with no workable tasks to the bottom
+			aTasks := []*wiki.Task{}
+			for _, task := range sortedNodes[i].GetTasks() {
+				if task.Status == wiki.TASK_STATUS_ACTIVE || task.Status == wiki.TASK_STATUS_DEFAULT {
+					aTasks = append(aTasks, task)
+				}
+			}
+			bTasks := []*wiki.Task{}
+			for _, task := range sortedNodes[j].GetTasks() {
+				if task.Status == wiki.TASK_STATUS_ACTIVE || task.Status == wiki.TASK_STATUS_DEFAULT {
+					bTasks = append(bTasks, task)
+				}
+			}
+			if len(aTasks) == 0 && len(bTasks) != 0 {
+				return false
+			}
+			if len(aTasks) != 0 && len(bTasks) == 0 {
+				return true
+			}
+
+			// by priority
 			aPriority, err := strconv.Atoi(aMeta["priority"])
 			if err != nil {
 				aPriority = 0
@@ -117,12 +142,26 @@ func (app *App) loadTasks() {
 			if err != nil {
 				bPriority = 0
 			}
-
+			// by name if they have the same non-zero priority
+			if aPriority == bPriority && aPriority != 0 {
+				return strings.Compare(aName, bName) < 0
+			}
+			// by raw priority if it's different
 			if aPriority != bPriority {
 				return aPriority > bPriority
 			}
+
+			// by task count
+			if len(aTasks) != len(bTasks) {
+				return len(aTasks) > len(bTasks)
+			}
+
+			// by name otherwise
+			log.Printf("aName: %s, bName: %s", aName, bName)
+			return strings.Compare(aName, bName) < 0
 		}
 
+		// without meta
 		aName := strings.TrimPrefix(strings.ToLower(sortedNodes[i].GetName()), "project-")
 		bName := strings.TrimPrefix(strings.ToLower(sortedNodes[j].GetName()), "project-")
 		return strings.Compare(aName, bName) < 0

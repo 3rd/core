@@ -31,7 +31,7 @@ func (c *ProjectSidebar) Render() ui.Buffer {
 		project := c.AppState.Nodes[projectIndex]
 		tasks := []*wiki.Task{}
 		for _, task := range project.GetTasks() {
-			if task.Status != wiki.TASK_STATUS_DONE && task.Status != wiki.TASK_STATUS_CANCELLED {
+			if task.Status == wiki.TASK_STATUS_DEFAULT || task.Status == wiki.TASK_STATUS_ACTIVE {
 				tasks = append(tasks, task)
 			}
 		}
