@@ -172,6 +172,22 @@ func (app *App) loadTasks() {
 	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
 		app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
 	}
+
+	// filter focused tasks
+	if app.state.ActiveFocusedProjectID != "" {
+		focusedTasks := []*wiki.Task{}
+		for _, task := range getTasksResult.ActiveTasks {
+			if task.Node != nil && task.Node.GetID() == app.state.ActiveFocusedProjectID {
+				focusedTasks = append(focusedTasks, task)
+			}
+		}
+		app.state.ActiveTasks = focusedTasks
+		if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
+			app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
+		}
+	} else {
+		app.state.ActiveTasks = getTasksResult.ActiveTasks
+	}
 }
 
 func (app *App) showNotification(message string) {
@@ -201,6 +217,21 @@ func (app *App) handleActiveNavigateUp() {
 	}
 	app.state.ActiveSelectedIndex--
 	app.adjustActiveScroll()
+	app.Update()
+}
+
+func (app *App) handleActiveToggleFocus() {
+	if app.state.ActiveFocusedProjectID == "" {
+		if len(app.state.ActiveTasks) > 0 && app.state.ActiveSelectedIndex < len(app.state.ActiveTasks) {
+			focusedTask := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
+			if focusedTask.Node != nil {
+				app.state.ActiveFocusedProjectID = focusedTask.Node.GetID()
+			}
+		}
+	} else {
+		app.state.ActiveFocusedProjectID = ""
+	}
+	app.loadTasks()
 	app.Update()
 }
 
@@ -718,6 +749,8 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 				app.handleActiveNavigateUp()
 			case ' ':
 				app.handleActiveToggleInProgress()
+			case 'f':
+				app.handleActiveToggleFocus()
 			}
 		case tcell.KeyCtrlC:
 			app.handleActiveDeactivateTask()

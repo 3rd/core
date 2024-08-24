@@ -42,6 +42,7 @@ type AppState struct {
 	ActiveMode                 APP_ACTIVE_MODE
 	ActiveSelectedIndex        int
 	ActiveScrollOffset         int
+	ActiveFocusedProjectID     string
 	// history
 	HistoryEntryOffset int
 	// projects
