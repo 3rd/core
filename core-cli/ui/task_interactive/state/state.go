@@ -9,6 +9,7 @@ import (
 
 type APP_TAB string
 type APP_ACTIVE_MODE string
+type TimeFilterMode int
 
 const (
 	APP_TAB_ACTIVE          APP_TAB         = ""
@@ -20,6 +21,22 @@ const (
 	NOTIFICATION_DURATION = 5 * time.Second
 )
 
+const (
+	TimeFilterToday TimeFilterMode = iota
+	TimeFilter24Hours
+)
+
+func (t TimeFilterMode) String() string {
+	switch t {
+	case TimeFilterToday:
+		return "Today"
+	case TimeFilter24Hours:
+		return "24 Hours"
+	default:
+		return "Today"
+	}
+}
+
 type Notification struct {
 	Message string
 }
@@ -29,12 +46,27 @@ type HistoryEntry struct {
 	Tasks []*wiki.Task
 }
 
+type ProjectFilterItem struct {
+	ProjectID   string
+	ProjectName string
+	TaskCount   int
+	IsEnabled   bool
+}
+
+type ProjectFilterModalState struct {
+	IsVisible        bool
+	CursorIndex      int
+	Projects         []ProjectFilterItem
+	FilteredProjects map[string]bool // ProjectID -> enabled status
+}
+
 type AppState struct {
-	CurrentTab   APP_TAB
-	Nodes        []wiki.Node
-	Tasks        []*wiki.Task
-	ActiveTasks  []*wiki.Task
-	HeaderHeight int
+	CurrentTab    APP_TAB
+	Nodes         []wiki.Node
+	Tasks         []*wiki.Task
+	ActiveTasks   []*wiki.Task // all active tasks (unfiltered)
+	FilteredTasks []*wiki.Task // filtered tasks to display
+	HeaderHeight  int
 	// notification
 	Notification *Notification
 	// active
@@ -43,6 +75,9 @@ type AppState struct {
 	ActiveSelectedIndex        int
 	ActiveScrollOffset         int
 	ActiveFocusedProjectID     string
+	ActiveTimeFilter           TimeFilterMode
+	// project filter modal
+	ProjectFilterModal ProjectFilterModalState
 	// history
 	HistoryEntryOffset int
 	// projects
@@ -55,7 +90,7 @@ type AppState struct {
 
 func (app *AppState) GetLongestTaskLength() int {
 	max := 0
-	for _, task := range app.ActiveTasks {
+	for _, task := range app.FilteredTasks {
 		if len(task.Text) > max {
 			max = len(task.Text)
 		}
@@ -65,7 +100,7 @@ func (app *AppState) GetLongestTaskLength() int {
 
 func (app *AppState) GetDoneTasksCount() int {
 	count := 0
-	for _, task := range app.ActiveTasks {
+	for _, task := range app.FilteredTasks {
 		if task.IsDone() {
 			count++
 		}
@@ -75,7 +110,7 @@ func (app *AppState) GetDoneTasksCount() int {
 
 func (app *AppState) GetNotDoneTasksCount() int {
 	count := 0
-	for _, task := range app.ActiveTasks {
+	for _, task := range app.FilteredTasks {
 		if !task.IsDone() {
 			count++
 		}

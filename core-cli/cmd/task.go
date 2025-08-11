@@ -122,8 +122,8 @@ var taskInteractiveCommand = &cobra.Command{
 			longestActiveProjectLength := 0
 			longestProjectLength := 0
 
-			recentlyDoneOffset, _ := time.ParseDuration("24h")
 			now := time.Now()
+			recentlyDoneOffset, _ := time.ParseDuration("24h")
 			startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 			if recentlyDoneOffset > 0 {
 				startOfDay = startOfDay.Add(-recentlyDoneOffset)

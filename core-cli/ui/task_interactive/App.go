@@ -168,26 +168,82 @@ func (app *App) loadTasks() {
 	})
 	app.state.Nodes = sortedNodes
 
-	// guard out of bounds
-	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
-		app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
-	}
+	// apply all filters
+	app.applyAllFilters()
 
-	// filter focused tasks
-	if app.state.ActiveFocusedProjectID != "" {
-		focusedTasks := []*wiki.Task{}
-		for _, task := range getTasksResult.ActiveTasks {
-			if task.Node != nil && task.Node.GetID() == app.state.ActiveFocusedProjectID {
-				focusedTasks = append(focusedTasks, task)
+	// guard out of bounds
+	if app.state.ActiveSelectedIndex >= len(app.state.FilteredTasks) {
+		app.state.ActiveSelectedIndex = max(len(app.state.FilteredTasks)-1, 0)
+	}
+}
+
+// applyAllFilters starting from ActiveTasks:
+// 1. time filter (t, for done tasks)
+// 2. focus filter (f)
+// 3. project filters (p)
+func (app *App) applyAllFilters() {
+	filteredTasks := app.state.ActiveTasks
+
+	// time filter
+	if app.state.ActiveTimeFilter == state.TimeFilterToday {
+		now := time.Now()
+		todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+
+		newFiltered := []*wiki.Task{}
+		for _, task := range filteredTasks {
+			// for done tasks, only include if done today
+			if task.Status == wiki.TASK_STATUS_DONE {
+				lastSession := task.GetLastSession()
+				if lastSession != nil && !lastSession.Start.Before(todayStart) {
+					newFiltered = append(newFiltered, task)
+				}
+			} else {
+				// not done tasks always pass through
+				newFiltered = append(newFiltered, task)
 			}
 		}
-		app.state.ActiveTasks = focusedTasks
-		if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks) {
-			app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
-		}
-	} else {
-		app.state.ActiveTasks = getTasksResult.ActiveTasks
+		filteredTasks = newFiltered
 	}
+
+	// focus filter
+	if app.state.ActiveFocusedProjectID != "" {
+		newFiltered := []*wiki.Task{}
+		for _, task := range filteredTasks {
+			if task.Node != nil && task.Node.GetID() == app.state.ActiveFocusedProjectID {
+				newFiltered = append(newFiltered, task)
+			}
+		}
+		filteredTasks = newFiltered
+	} else {
+		// project filters
+		if len(app.state.ProjectFilterModal.FilteredProjects) > 0 {
+			// check if any project is disabled
+			hasDisabledProjects := false
+			for _, enabled := range app.state.ProjectFilterModal.FilteredProjects {
+				if !enabled {
+					hasDisabledProjects = true
+					break
+				}
+			}
+
+			// only filter if some projects are disabled
+			if hasDisabledProjects {
+				newFiltered := []*wiki.Task{}
+				for _, task := range filteredTasks {
+					if task.Node != nil {
+						projectID := task.Node.GetID()
+						// Include task if project is enabled or not in filter list
+						if enabled, exists := app.state.ProjectFilterModal.FilteredProjects[projectID]; !exists || enabled {
+							newFiltered = append(newFiltered, task)
+						}
+					}
+				}
+				filteredTasks = newFiltered
+			}
+		}
+	}
+
+	app.state.FilteredTasks = filteredTasks
 }
 
 func (app *App) showNotification(message string) {
@@ -203,7 +259,7 @@ func (app *App) showNotification(message string) {
 }
 
 func (app *App) handleActiveNavigateDown() {
-	if app.state.ActiveSelectedIndex >= len(app.state.ActiveTasks)-1 {
+	if app.state.ActiveSelectedIndex >= len(app.state.FilteredTasks)-1 {
 		return
 	}
 	app.state.ActiveSelectedIndex++
@@ -222,8 +278,8 @@ func (app *App) handleActiveNavigateUp() {
 
 func (app *App) handleActiveToggleFocus() {
 	if app.state.ActiveFocusedProjectID == "" {
-		if len(app.state.ActiveTasks) > 0 && app.state.ActiveSelectedIndex < len(app.state.ActiveTasks) {
-			focusedTask := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
+		if len(app.state.FilteredTasks) > 0 && app.state.ActiveSelectedIndex < len(app.state.FilteredTasks) {
+			focusedTask := app.state.FilteredTasks[app.state.ActiveSelectedIndex]
 			if focusedTask.Node != nil {
 				app.state.ActiveFocusedProjectID = focusedTask.Node.GetID()
 			}
@@ -231,19 +287,24 @@ func (app *App) handleActiveToggleFocus() {
 	} else {
 		app.state.ActiveFocusedProjectID = ""
 	}
-	app.loadTasks()
+
+	// reapply filters
+	app.applyAllFilters()
+
+	// guard selected index
+	if app.state.ActiveSelectedIndex >= len(app.state.FilteredTasks) {
+		app.state.ActiveSelectedIndex = max(len(app.state.FilteredTasks)-1, 0)
+	}
+
 	app.Update()
 }
 
 func (app *App) adjustActiveScroll() {
 	maxVisibleTasks := app.Height() - app.state.HeaderHeight
 	if maxVisibleTasks <= 0 {
-		return // Prevent division by zero or negative values
+		return
 	}
-	maxScrollOffset := len(app.state.ActiveTasks) - maxVisibleTasks
-	if maxScrollOffset < 0 {
-		maxScrollOffset = 0
-	}
+	maxScrollOffset := max(len(app.state.FilteredTasks)-maxVisibleTasks, 0)
 
 	if app.state.ActiveSelectedIndex < app.state.ActiveScrollOffset {
 		app.state.ActiveScrollOffset = app.state.ActiveSelectedIndex
@@ -271,8 +332,27 @@ func (app *App) handleHistoryScrollUp() {
 	}
 }
 
+func (app *App) handleToggleTimeFilter() {
+	if app.state.ActiveTimeFilter == state.TimeFilterToday {
+		app.state.ActiveTimeFilter = state.TimeFilter24Hours
+	} else {
+		app.state.ActiveTimeFilter = state.TimeFilterToday
+	}
+	app.applyAllFilters()
+
+	// guard selected index
+	if app.state.ActiveSelectedIndex >= len(app.state.FilteredTasks) {
+		app.state.ActiveSelectedIndex = len(app.state.FilteredTasks) - 1
+		if app.state.ActiveSelectedIndex < 0 {
+			app.state.ActiveSelectedIndex = 0
+		}
+	}
+
+	app.Update()
+}
+
 func (app *App) handleActiveEdit() {
-	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
+	task := app.state.FilteredTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	if node == nil {
 		return
@@ -295,7 +375,7 @@ func (app *App) handleActiveEdit() {
 }
 
 func (app *App) handleActiveToggleInProgress() {
-	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
+	task := app.state.FilteredTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	now := time.Now()
 	text, err := node.Text()
@@ -369,7 +449,7 @@ func (app *App) handleActiveToggleInProgress() {
 }
 
 func (app *App) handleActiveToggleDone() {
-	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
+	task := app.state.FilteredTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	now := time.Now()
 	text, err := node.Text()
@@ -479,11 +559,11 @@ func (app *App) handleActiveToggleDone() {
 }
 
 func (app *App) handleActiveDeactivateTask() {
-	if len(app.state.ActiveTasks) == 0 {
+	if len(app.state.FilteredTasks) == 0 {
 		return
 	}
 
-	task := app.state.ActiveTasks[app.state.ActiveSelectedIndex]
+	task := app.state.FilteredTasks[app.state.ActiveSelectedIndex]
 	node := task.Node.(*localWiki.LocalNode)
 	text, _ := node.Text()
 	lines := strings.Split(string(text), "\n")
@@ -663,8 +743,8 @@ func (app *App) handleNavigateTop() {
 func (app *App) handleNavigateBottom() {
 	switch app.state.CurrentTab {
 	case state.APP_TAB_ACTIVE:
-		if len(app.state.ActiveTasks) > 0 {
-			app.state.ActiveSelectedIndex = len(app.state.ActiveTasks) - 1
+		if len(app.state.FilteredTasks) > 0 {
+			app.state.ActiveSelectedIndex = len(app.state.FilteredTasks) - 1
 			app.adjustActiveScroll()
 		}
 	case state.APP_TAB_HISTORY:
@@ -683,8 +763,8 @@ func (app *App) handleYank() {
 	var taskText string
 	switch app.state.CurrentTab {
 	case state.APP_TAB_ACTIVE:
-		if app.state.ActiveSelectedIndex < len(app.state.ActiveTasks) {
-			taskText = app.state.ActiveTasks[app.state.ActiveSelectedIndex].Text
+		if app.state.ActiveSelectedIndex < len(app.state.FilteredTasks) {
+			taskText = app.state.FilteredTasks[app.state.ActiveSelectedIndex].Text
 		}
 	case state.APP_TAB_PROJECTS:
 		tasks := app.state.GetCurrentProjectTasks()
@@ -703,11 +783,180 @@ func (app *App) handleYank() {
 	}
 }
 
+func (app *App) handleShowProjectFilterModal() {
+	tasksToShow := app.state.ActiveTasks
+
+	// if in focus mode, only show the focused project
+	// TODO: should exit focus mode instead?
+	if app.state.ActiveFocusedProjectID != "" {
+		focusedTasks := []*wiki.Task{}
+		for _, task := range tasksToShow {
+			if task.Node != nil && task.Node.GetID() == app.state.ActiveFocusedProjectID {
+				focusedTasks = append(focusedTasks, task)
+			}
+		}
+		tasksToShow = focusedTasks
+	}
+
+	// collect unique projects from active tasks
+	projectMap := make(map[string]*state.ProjectFilterItem)
+
+	for _, task := range tasksToShow {
+		if task.Node != nil {
+			projectID := task.Node.GetID()
+			if _, exists := projectMap[projectID]; !exists {
+				projectName := task.Node.GetName()
+				projectMap[projectID] = &state.ProjectFilterItem{
+					ProjectID:   projectID,
+					ProjectName: projectName,
+					TaskCount:   0,
+					IsEnabled:   true,
+				}
+			}
+			projectMap[projectID].TaskCount++
+		}
+	}
+
+	projects := []state.ProjectFilterItem{}
+	totalTaskCount := 0
+	for _, project := range projectMap {
+		// check if project was previously filtered
+		if app.state.ProjectFilterModal.FilteredProjects != nil {
+			if enabled, exists := app.state.ProjectFilterModal.FilteredProjects[project.ProjectID]; exists {
+				project.IsEnabled = enabled
+			}
+		}
+		projects = append(projects, *project)
+		totalTaskCount += project.TaskCount
+	}
+
+	// sort projects by name
+	sort.Slice(projects, func(i, j int) bool {
+		return strings.Compare(projects[i].ProjectName, projects[j].ProjectName) < 0
+	})
+
+	// add "All" item at the beginning
+	allEnabled := true
+	for _, project := range projects {
+		if !project.IsEnabled {
+			allEnabled = false
+			break
+		}
+	}
+
+	allItem := state.ProjectFilterItem{
+		ProjectID:   "__all__",
+		ProjectName: "All",
+		TaskCount:   totalTaskCount,
+		IsEnabled:   allEnabled,
+	}
+	projects = append([]state.ProjectFilterItem{allItem}, projects...)
+
+	if app.state.ProjectFilterModal.FilteredProjects == nil {
+		app.state.ProjectFilterModal.FilteredProjects = make(map[string]bool)
+	}
+
+	// update modal state
+	app.state.ProjectFilterModal.IsVisible = true
+	app.state.ProjectFilterModal.CursorIndex = 0
+	app.state.ProjectFilterModal.Projects = projects
+
+	app.Update()
+}
+
+func (app *App) handleProjectFilterModalKeypress(ev tcell.EventKey) {
+	modalState := &app.state.ProjectFilterModal
+
+	switch ev.Key() {
+	case tcell.KeyEscape:
+		modalState.IsVisible = false
+		app.applyProjectFilters()
+		app.Update()
+		return
+
+	case tcell.KeyRune:
+		switch ev.Rune() {
+		case 'q':
+			modalState.IsVisible = false
+			app.applyProjectFilters()
+			app.Update()
+			return
+		case 'j':
+			if modalState.CursorIndex < len(modalState.Projects)-1 {
+				modalState.CursorIndex++
+			}
+		case 'k':
+			if modalState.CursorIndex > 0 {
+				modalState.CursorIndex--
+			}
+		case ' ':
+			if modalState.CursorIndex < len(modalState.Projects) {
+				// handle "All" item
+				if modalState.CursorIndex == 0 && len(modalState.Projects) > 0 && modalState.Projects[0].ProjectID == "__all__" {
+					// toggle all projects
+					newState := !modalState.Projects[0].IsEnabled
+					for i := range modalState.Projects {
+						modalState.Projects[i].IsEnabled = newState
+						if i > 0 { // skip "All"
+							modalState.FilteredProjects[modalState.Projects[i].ProjectID] = newState
+						}
+					}
+				} else {
+					// regular project toggle
+					project := &modalState.Projects[modalState.CursorIndex]
+					project.IsEnabled = !project.IsEnabled
+					modalState.FilteredProjects[project.ProjectID] = project.IsEnabled
+
+					// update "All" item state if it exists
+					if len(modalState.Projects) > 0 && modalState.Projects[0].ProjectID == "__all__" {
+						allEnabled := true
+						for i := 1; i < len(modalState.Projects); i++ {
+							if !modalState.Projects[i].IsEnabled {
+								allEnabled = false
+								break
+							}
+						}
+						modalState.Projects[0].IsEnabled = allEnabled
+					}
+				}
+			}
+		}
+
+	case tcell.KeyDown:
+		if modalState.CursorIndex < len(modalState.Projects)-1 {
+			modalState.CursorIndex++
+		}
+
+	case tcell.KeyUp:
+		if modalState.CursorIndex > 0 {
+			modalState.CursorIndex--
+		}
+	}
+
+	app.Update()
+}
+
+func (app *App) applyProjectFilters() {
+	app.applyAllFilters()
+
+	// guard selected index
+	if app.state.ActiveSelectedIndex >= len(app.state.FilteredTasks) {
+		app.state.ActiveSelectedIndex = max(len(app.state.FilteredTasks)-1, 0)
+	}
+
+	app.Update()
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
+	if app.state.CurrentTab == state.APP_TAB_ACTIVE && app.state.ProjectFilterModal.IsVisible {
+		app.handleProjectFilterModalKeypress(ev)
+		return
+	}
+
 	switch ev.Key() {
 	case tcell.KeyRune:
 		switch ev.Rune() {
-		case 'Q':
+		case 'q':
 			app.Quit()
 		case '1':
 			app.state.CurrentTab = state.APP_TAB_ACTIVE
@@ -715,20 +964,6 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			app.state.CurrentTab = state.APP_TAB_PROJECTS
 		case '3':
 			app.state.CurrentTab = state.APP_TAB_HISTORY
-		case 'q':
-			switch app.state.CurrentTab {
-			case state.APP_TAB_PROJECTS:
-				app.state.CurrentTab = state.APP_TAB_ACTIVE
-			case state.APP_TAB_HISTORY:
-				app.state.CurrentTab = state.APP_TAB_PROJECTS
-			}
-		case 'w':
-			switch app.state.CurrentTab {
-			case state.APP_TAB_ACTIVE:
-				app.state.CurrentTab = state.APP_TAB_PROJECTS
-			case state.APP_TAB_PROJECTS:
-				app.state.CurrentTab = state.APP_TAB_HISTORY
-			}
 		case 'g':
 			app.handleNavigateTop()
 		case 'G':
@@ -751,6 +986,10 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 				app.handleActiveToggleInProgress()
 			case 'f':
 				app.handleActiveToggleFocus()
+			case 'p':
+				app.handleShowProjectFilterModal()
+			case 't':
+				app.handleToggleTimeFilter()
 			}
 		case tcell.KeyCtrlC:
 			app.handleActiveDeactivateTask()
@@ -835,7 +1074,7 @@ func (app *App) Render() ui.Buffer {
 	// active tab
 	if app.state.CurrentTab == state.APP_TAB_ACTIVE {
 		taskList := components.TaskList{
-			Tasks:                app.state.ActiveTasks,
+			Tasks:                app.state.FilteredTasks,
 			Width:                app.Width(),
 			LongestProjectLength: app.state.LongestActiveProjectLength,
 			SelectedIndex:        app.state.ActiveSelectedIndex,
@@ -873,6 +1112,19 @@ func (app *App) Render() ui.Buffer {
 		b.DrawComponent(projectSidebar.Width, headerBuffer.Height(), &projectTaskList)
 	}
 
+	// project filter modal
+	if app.state.ProjectFilterModal.IsVisible {
+		modal := components.ProjectFilterModal{
+			AppState: &app.state,
+			Width:    app.Width(),
+			Height:   app.Height(),
+		}
+		modalBuffer := modal.Render()
+		modalX := (app.Width() - modalBuffer.Width()) / 2
+		modalY := (app.Height() - modalBuffer.Height()) / 2
+		b.DrawBuffer(modalX, modalY, modalBuffer)
+	}
+
 	return b
 }
 
@@ -885,6 +1137,8 @@ func Run(providers Providers) {
 	defer logFile.Close()
 	log.SetOutput(logFile)
 
-	app := App{providers: providers}
+	app := App{
+		providers: providers,
+	}
 	app.Run(&app)
 }

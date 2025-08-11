@@ -56,7 +56,7 @@ func (c *Header) Render() ui.Buffer {
 	}
 	var midPoint = float64(barWidth) * (float64(c.AppState.GetDoneTasksCount()) / (float64(c.AppState.GetDoneTasksCount()) + float64(c.AppState.GetNotDoneTasksCount())))
 
-	for i := 0; i < barWidth; i++ {
+	for i := range barWidth {
 		ch := "▭"
 		if float64(i) < midPoint {
 			ch = "▬"
@@ -104,10 +104,7 @@ func (c *Header) Render() ui.Buffer {
 
 	// draw left/right
 	b.DrawBuffer(0, 0, left)
-	rightX := c.Width - right.Width()
-	if rightX < 0 {
-		rightX = 0
-	}
+	rightX := max(c.Width-right.Width(), 0)
 	b.DrawBuffer(rightX, 0, right)
 
 	// tabs
@@ -116,7 +113,10 @@ func (c *Header) Render() ui.Buffer {
 	inactiveTabStyle := ui.Style{Background: theme.TAB_INACTIVE_BG, Foreground: theme.TAB_INACTIVE_FG}
 
 	activeTab := " (1) Active "
+	// add time filter indicator
 	if c.AppState.CurrentTab == state.APP_TAB_ACTIVE {
+		filterIndicator := fmt.Sprintf("[%s]", c.AppState.ActiveTimeFilter.String())
+		activeTab = fmt.Sprintf(" (1) Active %s ", filterIndicator)
 		tabsBuffer.Text(0, 0, activeTab, activeTabStyle)
 	} else {
 		tabsBuffer.Text(0, 0, activeTab, inactiveTabStyle)
