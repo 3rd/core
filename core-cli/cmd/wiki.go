@@ -5,11 +5,39 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
+
+	"slices"
 
 	local_wiki "github.com/3rd/core/core-lib/wiki/local"
 	"github.com/radovskyb/watcher"
 	"github.com/spf13/cobra"
 )
+
+func parseTypes(typeFilter string) []string {
+	if typeFilter == "" {
+		return []string{}
+	}
+
+	parts := strings.Split(typeFilter, ",")
+	types := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			types = append(types, trimmed)
+		}
+	}
+
+	return types
+}
+
+func matchesAnyType(nodeType string, types []string) bool {
+	if len(types) == 0 {
+		return true
+	}
+	return slices.Contains(types, nodeType)
+}
 
 var wikiListCommand = &cobra.Command{
 	Use:   "ls",
@@ -30,6 +58,8 @@ var wikiListCommand = &cobra.Command{
 			panic(err)
 		}
 
+		types := parseTypes(typeFilter)
+
 		// regular
 		if !isDebug {
 			wiki, err := local_wiki.NewLocalWiki(local_wiki.LocalWikiConfig{
@@ -43,8 +73,11 @@ var wikiListCommand = &cobra.Command{
 
 			for _, node := range nodes {
 				meta := node.GetMeta()
-				if meta != nil && typeFilter == "" || meta["type"] == typeFilter {
-					fmt.Printf("%s\n", node.GetID())
+				if meta != nil {
+					nodeType := meta["type"]
+					if matchesAnyType(nodeType, types) {
+						fmt.Printf("%s\n", node.GetID())
+					}
 				}
 			}
 		}
@@ -61,8 +94,11 @@ var wikiListCommand = &cobra.Command{
 			nodes, _ := wiki.GetNodes()
 			for _, node := range nodes {
 				meta := node.GetMeta()
-				if meta != nil && typeFilter == "" || meta["type"] == typeFilter {
-					fmt.Printf("%s %s\n", node.GetID(), node.ParseDuration)
+				if meta != nil {
+					nodeType := meta["type"]
+					if matchesAnyType(nodeType, types) {
+						fmt.Printf("%s %s\n", node.GetID(), node.ParseDuration)
+					}
 				}
 			}
 		}

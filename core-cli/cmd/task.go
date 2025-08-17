@@ -69,7 +69,7 @@ var taskCurrentCommand = &cobra.Command{
 		for _, node := range nodes {
 			meta := node.GetMeta()
 			nodeType, ok := meta["type"]
-			if !ok || nodeType != "project" {
+			if !ok || (nodeType != "project" && nodeType != "person") {
 				continue
 			}
 
@@ -84,6 +84,45 @@ var taskCurrentCommand = &cobra.Command{
 						fmt.Printf("%s - %s\n", node.GetName(), task.Text)
 					}
 					return
+				}
+			}
+		}
+	},
+}
+
+var taskActiveCommand = &cobra.Command{
+	Use:   "active",
+	Short: "list all active tasks for debugging",
+	Run: func(cmd *cobra.Command, args []string) {
+		root := env.TASK_ROOT
+		if len(root) == 0 {
+			panic("TASK_ROOT not set")
+		}
+
+		wikiInstance, err := localWiki.NewLocalWiki(localWiki.LocalWikiConfig{
+			Root:  root,
+			Parse: "full",
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		nodes, err := wikiInstance.GetNodes()
+		if err != nil {
+			panic(err)
+		}
+
+		for _, node := range nodes {
+			meta := node.GetMeta()
+			nodeType, ok := meta["type"]
+			if !ok || (nodeType != "project" && nodeType != "person") {
+				continue
+			}
+
+			nodeTasks := node.GetTasks()
+			for _, task := range nodeTasks {
+				if task.Status == wiki.TASK_STATUS_ACTIVE {
+					fmt.Printf("%s - %s\n", node.GetName(), task.Text)
 				}
 			}
 		}
@@ -133,7 +172,7 @@ var taskInteractiveCommand = &cobra.Command{
 			for _, node := range nodes {
 				meta := node.GetMeta()
 				nodeType, ok := meta["type"]
-				if !ok || nodeType != "project" {
+				if !ok || (nodeType != "project" && nodeType != "person") {
 					continue
 				}
 
@@ -321,7 +360,7 @@ func init() {
 
 	taskCurrentCommand.Flags().BoolP("elapsed", "e", false, "include elapsed time")
 	cmd.AddCommand(taskCurrentCommand)
-
+	cmd.AddCommand(taskActiveCommand)
 	cmd.AddCommand(taskInteractiveCommand)
 
 	rootCmd.AddCommand(cmd)
