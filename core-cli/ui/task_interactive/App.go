@@ -193,9 +193,19 @@ func (app *App) applyAllFilters() {
 		for _, task := range filteredTasks {
 			// for done tasks, only include if done today
 			if task.Status == wiki.TASK_STATUS_DONE {
+				// check last session for regular tasks
 				lastSession := task.GetLastSession()
 				if lastSession != nil && !lastSession.Start.Before(todayStart) {
 					newFiltered = append(newFiltered, task)
+					continue
+				}
+				
+				// for recurrent tasks, also check completion
+				if task.Schedule != nil && task.Schedule.Repeat != "" {
+					completion := task.GetCompletionForDate(now)
+					if completion != nil {
+						newFiltered = append(newFiltered, task)
+					}
 				}
 			} else {
 				// not done tasks always pass through
