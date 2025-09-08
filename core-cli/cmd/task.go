@@ -2,6 +2,7 @@ package cmd
 
 import (
 	taskinteractive "core/ui/task_interactive"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -94,6 +95,9 @@ var taskActiveCommand = &cobra.Command{
 	Use:   "active",
 	Short: "list all active tasks for debugging",
 	Run: func(cmd *cobra.Command, args []string) {
+		includeDone, _ := cmd.Flags().GetBool("include-done")
+		asJSON, _ := cmd.Flags().GetBool("json")
+
 		root := env.TASK_ROOT
 		if len(root) == 0 {
 			panic("TASK_ROOT not set")
@@ -112,6 +116,37 @@ var taskActiveCommand = &cobra.Command{
 			panic(err)
 		}
 
+		// active only
+		if !includeDone && !asJSON {
+			for _, node := range nodes {
+				meta := node.GetMeta()
+				nodeType, ok := meta["type"]
+				if !ok || (nodeType != "project" && nodeType != "person") {
+					continue
+				}
+
+				nodeTasks := node.GetTasks()
+				for _, task := range nodeTasks {
+					if task.Status == wiki.TASK_STATUS_ACTIVE {
+						fmt.Printf("%s - %s\n", node.GetName(), task.Text)
+					}
+				}
+			}
+			return
+		}
+
+		// with flags
+		type simpleTask struct {
+			Node wiki.Node
+			Task *wiki.Task
+		}
+		activeTasks := []simpleTask{}
+		doneToday := []simpleTask{}
+
+		now := time.Now()
+		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+		endOfDay := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.Local)
+
 		for _, node := range nodes {
 			meta := node.GetMeta()
 			nodeType, ok := meta["type"]
@@ -122,9 +157,63 @@ var taskActiveCommand = &cobra.Command{
 			nodeTasks := node.GetTasks()
 			for _, task := range nodeTasks {
 				if task.Status == wiki.TASK_STATUS_ACTIVE {
-					fmt.Printf("%s - %s\n", node.GetName(), task.Text)
+					activeTasks = append(activeTasks, simpleTask{Node: node, Task: task})
+				}
+				if includeDone && task.Status == wiki.TASK_STATUS_DONE {
+					for _, session := range task.Sessions {
+						if session.Start.After(startOfDay) && session.Start.Before(endOfDay) {
+							doneToday = append(doneToday, simpleTask{Node: node, Task: task})
+							break
+						}
+					}
 				}
 			}
+		}
+
+		if asJSON {
+			type JSONTask struct {
+				NodeID   string `json:"nodeId"`
+				NodeName string `json:"nodeName"`
+				Text     string `json:"text"`
+				Status   string `json:"status"`
+			}
+			payload := struct {
+				GeneratedAt string     `json:"generatedAt"`
+				ActiveTasks []JSONTask `json:"activeTasks"`
+				DoneTasks   []JSONTask `json:"doneTasks,omitempty"`
+			}{GeneratedAt: now.Format(time.RFC3339)}
+
+			for _, it := range activeTasks {
+				payload.ActiveTasks = append(payload.ActiveTasks, JSONTask{
+					NodeID:   it.Node.GetID(),
+					NodeName: it.Node.GetName(),
+					Text:     it.Task.Text,
+					Status:   string(it.Task.Status),
+				})
+			}
+			if includeDone {
+				for _, it := range doneToday {
+					payload.DoneTasks = append(payload.DoneTasks, JSONTask{
+						NodeID:   it.Node.GetID(),
+						NodeName: it.Node.GetName(),
+						Text:     it.Task.Text,
+						Status:   string(it.Task.Status),
+					})
+				}
+			}
+			data, err := json.MarshalIndent(payload, "", "  ")
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(data))
+			return
+		}
+
+		for _, it := range activeTasks {
+			fmt.Printf("%s - %s\n", it.Node.GetName(), it.Task.Text)
+		}
+		for _, it := range doneToday {
+			fmt.Printf("%s - %s\n", it.Node.GetName(), it.Task.Text)
 		}
 	},
 }
@@ -359,6 +448,8 @@ func init() {
 	cmd := &cobra.Command{Use: "task"}
 
 	taskCurrentCommand.Flags().BoolP("elapsed", "e", false, "include elapsed time")
+	taskActiveCommand.Flags().Bool("include-done", false, "include tasks done since today 00:00")
+	taskActiveCommand.Flags().Bool("json", false, "output structured JSON")
 	cmd.AddCommand(taskCurrentCommand)
 	cmd.AddCommand(taskActiveCommand)
 	cmd.AddCommand(taskInteractiveCommand)
