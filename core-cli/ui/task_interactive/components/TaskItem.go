@@ -22,6 +22,27 @@ type TaskItem struct {
 
 var taskLabelRegex = regexp.MustCompile(`^([a-zA-Z0-9_-]+:)`)
 
+func RenderProjectColumnText(projectName string) string {
+	projectText := strings.TrimPrefix(projectName, "project-")
+	return strings.Replace(projectText, "project:", "p:", 1)
+}
+
+func GetRenderedProjectColumnWidth(tasks []*wiki.Task) int {
+	longest := 0
+	for _, task := range tasks {
+		if task.Node == nil {
+			continue
+		}
+
+		projectText := RenderProjectColumnText(task.Node.GetName())
+		if len(projectText) > longest {
+			longest = len(projectText)
+		}
+	}
+
+	return longest
+}
+
 func (c *TaskItem) Render() ui.Buffer {
 	b := ui.Buffer{}
 	hoffset := 0
@@ -31,8 +52,8 @@ func (c *TaskItem) Render() ui.Buffer {
 	// styles
 	taskStyle := ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG}
 	projectStyle := taskStyle
-	projectStyle.Background = taskStyle.Background.Darken(0.05)
-	projectStyle.Foreground = theme.PROJECT_FG
+	projectStyle.Background = theme.TASK_PROJECT_BG
+	projectStyle.Foreground = theme.TASK_PROJECT_FG
 
 	rewardStyle := ui.Style{Foreground: theme.TASK_REWARD_DEFAULT_FG}
 	if taskReward > 10 {
@@ -46,13 +67,13 @@ func (c *TaskItem) Render() ui.Buffer {
 		taskStyle.Background = theme.TASK_CURRENT_BG
 		taskStyle.Foreground = theme.TASK_CURRENT_FG
 		projectStyle.Background = taskStyle.Background.Darken(0.05)
-		projectStyle.Foreground = projectStyle.Foreground.Lighten(0.1)
+		projectStyle.Foreground = theme.TASK_CURRENT_FG
 		rewardStyle.Foreground = rewardStyle.Foreground.Lighten(0.2)
 	} else if c.Task.Status == wiki.TASK_STATUS_DONE {
 		taskStyle.Background = theme.TASK_DONE_BG
 		taskStyle.Foreground = theme.TASK_DONE_FG
 		projectStyle.Background = taskStyle.Background.Darken(0.05)
-		projectStyle.Foreground = theme.PROJECT_DONE_FG
+		projectStyle.Foreground = theme.TASK_PROJECT_DONE_FG
 		rewardStyle.Foreground = projectStyle.Foreground
 	}
 
@@ -84,10 +105,7 @@ func (c *TaskItem) Render() ui.Buffer {
 	// project
 	projectText := ""
 	if c.Task.Node != nil {
-		projectText = c.Task.Node.GetName()
-
-		// patch project name (strip project-)
-		projectText = strings.TrimPrefix(projectText, "project-")
+		projectText = RenderProjectColumnText(c.Task.Node.GetName())
 	}
 	project := ui.Buffer{}
 	project.Resize(c.LongestProjectLength+2, 1)

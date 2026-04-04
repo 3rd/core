@@ -31,7 +31,7 @@ func (t TimeFilterMode) String() string {
 	case TimeFilterToday:
 		return "Today"
 	case TimeFilter24Hours:
-		return "24 Hours"
+		return "Last 24h"
 	default:
 		return "Today"
 	}
@@ -51,6 +51,11 @@ type ProjectFilterItem struct {
 	ProjectName string
 	TaskCount   int
 	IsEnabled   bool
+}
+
+type HelpModalState struct {
+	IsVisible    bool
+	ScrollOffset int
 }
 
 type ProjectFilterModalState struct {
@@ -76,8 +81,11 @@ type AppState struct {
 	ActiveScrollOffset         int
 	ActiveFocusedProjectID     string
 	ActiveTimeFilter           TimeFilterMode
+	ActiveHideDone             bool
 	// project filter modal
 	ProjectFilterModal ProjectFilterModalState
+	// help modal
+	HelpModal HelpModalState
 	// history
 	HistoryEntryOffset int
 	// projects
@@ -100,7 +108,7 @@ func (app *AppState) GetLongestTaskLength() int {
 
 func (app *AppState) GetDoneTasksCount() int {
 	count := 0
-	for _, task := range app.FilteredTasks {
+	for _, task := range app.ActiveTasks {
 		if task.IsDone() {
 			count++
 		}
@@ -110,7 +118,7 @@ func (app *AppState) GetDoneTasksCount() int {
 
 func (app *AppState) GetNotDoneTasksCount() int {
 	count := 0
-	for _, task := range app.FilteredTasks {
+	for _, task := range app.ActiveTasks {
 		if !task.IsDone() {
 			count++
 		}

@@ -178,14 +178,26 @@ func (app *App) loadTasks() {
 }
 
 // applyAllFilters starting from ActiveTasks:
+// 0. hide done (.)
 // 1. time filter (t, for done tasks)
 // 2. focus filter (f)
 // 3. project filters (p)
 func (app *App) applyAllFilters() {
 	filteredTasks := app.state.ActiveTasks
 
-	// time filter
-	if app.state.ActiveTimeFilter == state.TimeFilterToday {
+	// hide done filter
+	if app.state.ActiveHideDone {
+		newFiltered := []*wiki.Task{}
+		for _, task := range filteredTasks {
+			if !task.IsDone() {
+				newFiltered = append(newFiltered, task)
+			}
+		}
+		filteredTasks = newFiltered
+	}
+
+	// time filter (only relevant when done tasks are visible)
+	if !app.state.ActiveHideDone && app.state.ActiveTimeFilter == state.TimeFilterToday {
 		now := time.Now()
 		todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 
@@ -356,6 +368,18 @@ func (app *App) handleToggleTimeFilter() {
 		if app.state.ActiveSelectedIndex < 0 {
 			app.state.ActiveSelectedIndex = 0
 		}
+	}
+
+	app.Update()
+}
+
+func (app *App) handleToggleHideDone() {
+	app.state.ActiveHideDone = !app.state.ActiveHideDone
+	app.applyAllFilters()
+
+	// guard selected index
+	if app.state.ActiveSelectedIndex >= len(app.state.FilteredTasks) {
+		app.state.ActiveSelectedIndex = max(len(app.state.FilteredTasks)-1, 0)
 	}
 
 	app.Update()
@@ -957,7 +981,36 @@ func (app *App) applyProjectFilters() {
 	app.Update()
 }
 
+func (app *App) handleHelpModalKeypress(ev tcell.EventKey) {
+	switch ev.Key() {
+	case tcell.KeyEscape:
+		app.state.HelpModal.IsVisible = false
+	case tcell.KeyRune:
+		switch ev.Rune() {
+		case 'q', '?':
+			app.state.HelpModal.IsVisible = false
+		case 'j':
+			app.state.HelpModal.ScrollOffset++
+		case 'k':
+			if app.state.HelpModal.ScrollOffset > 0 {
+				app.state.HelpModal.ScrollOffset--
+			}
+		}
+	}
+	app.Update()
+}
+
 func (app *App) OnKeypress(ev tcell.EventKey) {
+	if ev.Key() == tcell.KeyCtrlC {
+		app.Quit()
+		return
+	}
+
+	if app.state.HelpModal.IsVisible {
+		app.handleHelpModalKeypress(ev)
+		return
+	}
+
 	if app.state.CurrentTab == state.APP_TAB_ACTIVE && app.state.ProjectFilterModal.IsVisible {
 		app.handleProjectFilterModalKeypress(ev)
 		return
@@ -980,6 +1033,9 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			app.handleNavigateBottom()
 		case 'y':
 			app.handleYank()
+		case '?':
+			app.state.HelpModal.IsVisible = true
+			app.state.HelpModal.ScrollOffset = 0
 		}
 	}
 
@@ -1000,8 +1056,10 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 				app.handleShowProjectFilterModal()
 			case 't':
 				app.handleToggleTimeFilter()
+			case '.':
+				app.handleToggleHideDone()
 			}
-		case tcell.KeyCtrlC:
+		case tcell.KeyCtrlX:
 			app.handleActiveDeactivateTask()
 		case tcell.KeyEnter:
 			app.handleActiveEdit()
@@ -1086,7 +1144,7 @@ func (app *App) Render() ui.Buffer {
 		taskList := components.TaskList{
 			Tasks:                app.state.FilteredTasks,
 			Width:                app.Width(),
-			LongestProjectLength: app.state.LongestActiveProjectLength,
+			LongestProjectLength: components.GetRenderedProjectColumnWidth(app.state.FilteredTasks),
 			SelectedIndex:        app.state.ActiveSelectedIndex,
 			ScrollOffset:         app.state.ActiveScrollOffset,
 			MaxHeight:            app.Height() - app.state.HeaderHeight,
@@ -1125,6 +1183,19 @@ func (app *App) Render() ui.Buffer {
 	// project filter modal
 	if app.state.ProjectFilterModal.IsVisible {
 		modal := components.ProjectFilterModal{
+			AppState: &app.state,
+			Width:    app.Width(),
+			Height:   app.Height(),
+		}
+		modalBuffer := modal.Render()
+		modalX := (app.Width() - modalBuffer.Width()) / 2
+		modalY := (app.Height() - modalBuffer.Height()) / 2
+		b.DrawBuffer(modalX, modalY, modalBuffer)
+	}
+
+	// help modal
+	if app.state.HelpModal.IsVisible {
+		modal := components.HelpModal{
 			AppState: &app.state,
 			Width:    app.Width(),
 			Height:   app.Height(),

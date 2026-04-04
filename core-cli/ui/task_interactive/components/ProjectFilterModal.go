@@ -32,12 +32,12 @@ func (c *ProjectFilterModal) Render() ui.Buffer {
 
 	b.Resize(modalWidth, modalHeight)
 	b.FillStyle(ui.Style{
-		Background: theme.HEADER_BG,
+		Background: theme.MODAL_BG,
 		Foreground: theme.FG,
 	})
 
 	// borders
-	borderStyle := ui.Style{Foreground: theme.TASK_LABEL_FG}
+	borderStyle := ui.Style{Foreground: theme.MODAL_BORDER_FG}
 	b.DrawCell(0, 0, '┌', borderStyle)
 	for x := 1; x < modalWidth-1; x++ {
 		b.DrawCell(x, 0, '─', borderStyle)
@@ -105,14 +105,27 @@ func (c *ProjectFilterModal) Render() ui.Buffer {
 		}
 
 		// line style
-		lineStyle := ui.Style{Foreground: theme.FG}
+		lineStyle := ui.Style{
+			Background: theme.MODAL_BG,
+			Foreground: theme.FG,
+		}
 		if !project.IsEnabled {
 			lineStyle.Foreground = theme.TASK_DONE_FG
 		}
 		if isSelected {
-			lineStyle.Foreground = theme.PROJECT_FG
+			lineStyle.Background = theme.MODAL_SELECTED_BG
+			if project.IsEnabled {
+				lineStyle.Foreground = theme.TASK_PROJECT_FG
+			} else {
+				lineStyle.Foreground = theme.MODAL_SELECTED_FG
+			}
 			lineStyle.Bold = true
 		}
+
+		lineBuffer := ui.Buffer{}
+		lineBuffer.Resize(modalWidth-4, 1)
+		lineBuffer.FillStyle(lineStyle)
+		b.DrawBuffer(2, y, lineBuffer)
 
 		// item line
 		var line string

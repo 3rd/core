@@ -112,11 +112,11 @@ func (c *Header) Render() ui.Buffer {
 	activeTabStyle := ui.Style{Background: theme.TAB_ACTIVE_BG, Foreground: theme.TAB_ACTIVE_FG}
 	inactiveTabStyle := ui.Style{Background: theme.TAB_INACTIVE_BG, Foreground: theme.TAB_INACTIVE_FG}
 
-	activeTab := " (1) Active "
-	// add time filter indicator
+	activeTab := fmt.Sprintf(" (1) %s ", c.AppState.ActiveTimeFilter.String())
+	if c.AppState.ActiveHideDone {
+		activeTab = fmt.Sprintf(" (1) %s | Hide Done ", c.AppState.ActiveTimeFilter.String())
+	}
 	if c.AppState.CurrentTab == state.APP_TAB_ACTIVE {
-		filterIndicator := fmt.Sprintf("[%s]", c.AppState.ActiveTimeFilter.String())
-		activeTab = fmt.Sprintf(" (1) Active %s ", filterIndicator)
 		tabsBuffer.Text(0, 0, activeTab, activeTabStyle)
 	} else {
 		tabsBuffer.Text(0, 0, activeTab, inactiveTabStyle)

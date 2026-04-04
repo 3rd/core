@@ -355,7 +355,9 @@ var taskInteractiveCommand = &cobra.Command{
 					}
 				}
 
-				projectLength := len(strings.TrimPrefix(node.GetName(), "project-"))
+				projectText := strings.TrimPrefix(node.GetName(), "project-")
+				projectText = strings.Replace(projectText, "project:", "p:", 1)
+				projectLength := len(projectText)
 				if projectLength > longestProjectLength {
 					longestProjectLength = projectLength
 				}

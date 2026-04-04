@@ -5,6 +5,16 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
+SYSLANG_TREE_SITTER_DIR := ../syslang/tree-sitter-syslang
+SYSLANG_GRAMMAR_FILE := $(SYSLANG_TREE_SITTER_DIR)/grammar.js
+SYSLANG_GENERATED_PARSER := $(SYSLANG_TREE_SITTER_DIR)/src/parser.c
+
+define ensure_syslang_parser
+	if [[ ! -f $(SYSLANG_GENERATED_PARSER) || $(SYSLANG_GRAMMAR_FILE) -nt $(SYSLANG_GENERATED_PARSER) ]]; then
+		$(MAKE) -C $(SYSLANG_TREE_SITTER_DIR) generate
+	fi
+endef
+
 .DEFAULT_GOAL := help
 .DELETE_ON_ERROR:
 
@@ -26,7 +36,8 @@ test: ## run tests
 .PHONY: test
 
 build: ## build
-	go build .
+	$(ensure_syslang_parser)
+	go build -a .
 .PHONY: build
 
 install: ## install
