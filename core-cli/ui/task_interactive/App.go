@@ -211,7 +211,7 @@ func (app *App) applyAllFilters() {
 					newFiltered = append(newFiltered, task)
 					continue
 				}
-				
+
 				// for recurrent tasks, also check completion
 				if task.Schedule != nil && task.Schedule.Repeat != "" {
 					completion := task.GetCompletionForDate(now)
@@ -1122,10 +1122,7 @@ func (app *App) OnResize() {
 func (app *App) Render() ui.Buffer {
 	b := ui.Buffer{}
 	b.Resize(app.Width(), app.Height())
-	b.FillStyle(ui.Style{
-		Background: theme.BG,
-		Foreground: theme.FG,
-	})
+	b.FillStyle(theme.APP_STYLE)
 
 	header := components.Header{
 		AppState: &app.state,

@@ -100,13 +100,10 @@ func (c *HelpModal) Render() ui.Buffer {
 	}
 
 	b.Resize(modalWidth, modalHeight)
-	b.FillStyle(ui.Style{
-		Background: theme.MODAL_BG,
-		Foreground: theme.FG,
-	})
+	b.FillStyle(theme.MODAL_STYLE)
 
 	// borders
-	borderStyle := ui.Style{Foreground: theme.MODAL_BORDER_FG}
+	borderStyle := theme.MODAL_BORDER_STYLE
 	b.DrawCell(0, 0, '┌', borderStyle)
 	for x := 1; x < modalWidth-1; x++ {
 		b.DrawCell(x, 0, '─', borderStyle)
@@ -125,10 +122,7 @@ func (c *HelpModal) Render() ui.Buffer {
 	// title
 	title := " Keybindings "
 	titleX := (modalWidth - len(title)) / 2
-	b.Text(titleX, 0, title, ui.Style{
-		Foreground: theme.HEADER_FG,
-		Bold:       true,
-	})
+	b.Text(titleX, 0, title, theme.MODAL_TITLE_STYLE)
 
 	// content area
 	contentStartY := 2
@@ -136,21 +130,15 @@ func (c *HelpModal) Render() ui.Buffer {
 
 	// build flat line list
 	type line struct {
-		text  string
-		style ui.Style
+		text      string
+		style     ui.Style
+		isBinding bool
 	}
 	var lines []line
 
-	sectionTitleStyle := ui.Style{
-		Foreground: theme.TASK_PROJECT_FG,
-		Bold:       true,
-	}
-	bindingStyle := ui.Style{
-		Foreground: theme.FG,
-	}
-	keyStyle := ui.Style{
-		Foreground: theme.TASK_LABEL_FG,
-	}
+	sectionTitleStyle := theme.HELP_SECTION_STYLE
+	bindingStyle := theme.HELP_BINDING_STYLE
+	keyStyle := theme.HELP_KEY_STYLE
 
 	for i, s := range sections {
 		lines = append(lines, line{text: s.Title, style: sectionTitleStyle})
@@ -158,10 +146,10 @@ func (c *HelpModal) Render() ui.Buffer {
 			// pad key to fixed width for alignment
 			keyPadded := fmt.Sprintf("%-14s", bind.Key)
 			lines = append(lines, line{
-				text:  keyPadded + bind.Desc,
-				style: bindingStyle,
+				text:      keyPadded + bind.Desc,
+				style:     bindingStyle,
+				isBinding: true,
 			})
-			_ = keyStyle // used below in rendering
 		}
 		if i < len(sections)-1 {
 			lines = append(lines, line{text: "", style: bindingStyle})
@@ -186,7 +174,7 @@ func (c *HelpModal) Render() ui.Buffer {
 		}
 
 		// for binding lines, render key portion in accent color
-		if l.style.Foreground == theme.FG && len(l.text) > 14 {
+		if l.isBinding && len(l.text) > 14 {
 			b.Text(3, row, l.text[:14], keyStyle)
 			b.Text(17, row, l.text[14:], bindingStyle)
 		} else {
@@ -198,9 +186,7 @@ func (c *HelpModal) Render() ui.Buffer {
 	helpText := "j/k: scroll | ?/q/esc: close"
 	helpY := modalHeight - 2
 	helpX := max((modalWidth-len(helpText))/2, 2)
-	b.Text(helpX, helpY, helpText, ui.Style{
-		Foreground: theme.TASK_LABEL_FG,
-	})
+	b.Text(helpX, helpY, helpText, theme.MODAL_HELP_STYLE)
 
 	return b
 }

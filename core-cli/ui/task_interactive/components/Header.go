@@ -22,10 +22,9 @@ func (c *Header) Render() ui.Buffer {
 	b := ui.Buffer{}
 
 	// styles
-	bgStyle := ui.Style{Background: theme.HEADER_BG, Foreground: theme.HEADER_FG}
-	leftStyle := bgStyle
-	leftStyle.Background = leftStyle.Background.Darken(0.03)
-	rightStyle := leftStyle
+	bgStyle := theme.HEADER_STYLE
+	leftStyle := theme.HEADER_PANEL_STYLE
+	rightStyle := theme.HEADER_PANEL_STYLE
 
 	// bg
 	b.Resize(c.Width, 4)
@@ -92,7 +91,7 @@ func (c *Header) Render() ui.Buffer {
 	// right: points
 	rightRewardPoints := ui.Buffer{}
 	rightRewardPointsText := strconv.Itoa(totalRewardPoints)
-	rightRewardPoints.Text(0, 0, "", ui.Style{Foreground: theme.HEADER_REWARD_FG})
+	rightRewardPoints.Text(0, 0, "", theme.HEADER_REWARD_STYLE)
 	rightRewardPoints.Text(2, 0, rightRewardPointsText, rightStyle)
 
 	// draw right
@@ -109,8 +108,8 @@ func (c *Header) Render() ui.Buffer {
 
 	// tabs
 	tabsBuffer := ui.Buffer{}
-	activeTabStyle := ui.Style{Background: theme.TAB_ACTIVE_BG, Foreground: theme.TAB_ACTIVE_FG}
-	inactiveTabStyle := ui.Style{Background: theme.TAB_INACTIVE_BG, Foreground: theme.TAB_INACTIVE_FG}
+	activeTabStyle := theme.TAB_ACTIVE_STYLE
+	inactiveTabStyle := theme.TAB_INACTIVE_STYLE
 
 	activeTab := fmt.Sprintf(" (1) %s ", c.AppState.ActiveTimeFilter.String())
 	if c.AppState.ActiveHideDone {
@@ -140,9 +139,8 @@ func (c *Header) Render() ui.Buffer {
 
 	// notification
 	if c.AppState.Notification != nil {
-		notificationStyle := ui.Style{Foreground: theme.TASK_LABEL_FG}
 		notificationBuffer := ui.Buffer{}
-		notificationBuffer.Text(0, 0, c.AppState.Notification.Message, notificationStyle)
+		notificationBuffer.Text(0, 0, c.AppState.Notification.Message, theme.NOTIFICATION_STYLE)
 		b.DrawBuffer(c.Width/2-notificationBuffer.Width()/2, 2, notificationBuffer)
 	}
 

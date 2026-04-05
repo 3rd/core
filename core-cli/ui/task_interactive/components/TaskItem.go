@@ -48,40 +48,13 @@ func (c *TaskItem) Render() ui.Buffer {
 	hoffset := 0
 
 	taskReward := utils.ComputeTaskReward(c.Task)
+	isInProgress := c.Task.IsInProgress()
+	isDone := c.Task.Status == wiki.TASK_STATUS_DONE
 
 	// styles
-	taskStyle := ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG}
-	projectStyle := taskStyle
-	projectStyle.Background = theme.TASK_PROJECT_BG
-	projectStyle.Foreground = theme.TASK_PROJECT_FG
-
-	rewardStyle := ui.Style{Foreground: theme.TASK_REWARD_DEFAULT_FG}
-	if taskReward > 10 {
-		rewardStyle.Foreground = theme.TASK_REWARD_MEDIUM_FG
-	}
-	if taskReward >= 100 {
-		rewardStyle.Foreground = theme.TASK_REWARD_HIGH_FG
-	}
-
-	if c.Task.IsInProgress() {
-		taskStyle.Background = theme.TASK_CURRENT_BG
-		taskStyle.Foreground = theme.TASK_CURRENT_FG
-		projectStyle.Background = taskStyle.Background.Darken(0.05)
-		projectStyle.Foreground = theme.TASK_CURRENT_FG
-		rewardStyle.Foreground = rewardStyle.Foreground.Lighten(0.2)
-	} else if c.Task.Status == wiki.TASK_STATUS_DONE {
-		taskStyle.Background = theme.TASK_DONE_BG
-		taskStyle.Foreground = theme.TASK_DONE_FG
-		projectStyle.Background = taskStyle.Background.Darken(0.05)
-		projectStyle.Foreground = theme.TASK_PROJECT_DONE_FG
-		rewardStyle.Foreground = projectStyle.Foreground
-	}
-
-	if c.Selected {
-		taskStyle.Background = taskStyle.Background.Lighten(0.1)
-		taskStyle.Foreground = taskStyle.Foreground.Lighten(0.2)
-		projectStyle.Background = taskStyle.Background.Darken(0.05)
-	}
+	taskStyle := theme.TaskRowStyle(isInProgress, isDone, c.Selected)
+	projectStyle := theme.TaskProjectStyle(isInProgress, isDone, c.Selected)
+	rewardStyle := theme.TaskRewardStyle(taskReward, isInProgress, isDone)
 
 	checkmarkStyle := taskStyle
 	textStyle := taskStyle
@@ -123,7 +96,7 @@ func (c *TaskItem) Render() ui.Buffer {
 	if taskLabelRegex.MatchString(c.Task.Text) {
 		labelText := taskLabelRegex.FindStringSubmatch(c.Task.Text)[1]
 		label := ui.Buffer{}
-		label.Text(0, 0, labelText, ui.Style{Foreground: theme.TASK_LABEL_FG})
+		label.Text(0, 0, labelText, theme.TASK_LABEL_STYLE)
 		b.DrawBuffer(hoffset, 0, label)
 	}
 

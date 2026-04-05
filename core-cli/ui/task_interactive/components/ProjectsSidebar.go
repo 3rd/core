@@ -46,15 +46,11 @@ func (c *ProjectSidebar) Render() ui.Buffer {
 
 	width := longestTextLength + 2
 	b.Resize(width, c.Height)
-	b.FillStyle(ui.Style{Background: theme.PROJECT_SIDEBAR_BG, Foreground: theme.PROJECT_SIDEBAR_FG})
+	b.FillStyle(theme.PROJECT_SIDEBAR_STYLE)
 
 	for i := 0; i < c.Height && i < len(entries); i++ {
 		entry := entries[i]
-		style := ui.Style{Background: theme.PROJECT_SIDEBAR_BG, Foreground: theme.PROJECT_SIDEBAR_FG}
-		if i+c.ScrollOffset == c.AppState.ProjectSelectedIndex {
-			style.Background = theme.PROJECT_SIDEBAR_SELECTED_BG
-			style.Foreground = theme.PROJECT_SIDEBAR_SELECTED_FG
-		}
+		style := theme.ProjectSidebarStyle(i+c.ScrollOffset == c.AppState.ProjectSelectedIndex)
 
 		lineBuffer := ui.Buffer{}
 		lineBuffer.Resize(width, 1)

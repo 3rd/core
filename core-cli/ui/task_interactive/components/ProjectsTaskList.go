@@ -18,7 +18,7 @@ type ProjectTaskList struct {
 func (c *ProjectTaskList) Render() ui.Buffer {
 	b := ui.Buffer{}
 	b.Resize(c.Width, c.Height)
-	b.FillStyle(ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG})
+	b.FillStyle(theme.PROJECTS_TASK_STYLE)
 
 	tasks := c.AppState.GetCurrentProjectTasks()
 	for i := 0; i < c.Height; i++ {
@@ -28,14 +28,7 @@ func (c *ProjectTaskList) Render() ui.Buffer {
 		}
 		task := tasks[taskIndex]
 
-		style := ui.Style{Background: theme.TASK_BG, Foreground: theme.TASK_FG}
-		if task.Status == wiki.TASK_STATUS_ACTIVE {
-			style.Foreground = theme.PROJECTS_TASK_ACTIVE_FG
-		}
-		if taskIndex == c.AppState.ProjectsTaskSelectedIndex {
-			style.Background = style.Background.Lighten(0.1)
-			style.Foreground = style.Foreground.Lighten(0.2)
-		}
+		style := theme.ProjectsTaskStyle(task.Status == wiki.TASK_STATUS_ACTIVE, taskIndex == c.AppState.ProjectsTaskSelectedIndex)
 
 		// line
 		lineBuffer := ui.Buffer{}
