@@ -1049,7 +1049,11 @@ func (app *App) OnKeypress(ev tcell.EventKey) {
 			case 'k':
 				app.handleActiveNavigateUp()
 			case ' ':
-				app.handleActiveToggleInProgress()
+				if ev.Modifiers()&tcell.ModCtrl != 0 {
+					app.handleActiveToggleDone()
+				} else {
+					app.handleActiveToggleInProgress()
+				}
 			case 'f':
 				app.handleActiveToggleFocus()
 			case 'p':
