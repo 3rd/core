@@ -66,6 +66,13 @@ func (n *LocalNode) IsParsed() bool {
 	return n.document != nil
 }
 
+func (n *LocalNode) setDocument(document *syslang.Document) {
+	if n.document != nil {
+		n.document.Close()
+	}
+	n.document = document
+}
+
 func (n *LocalNode) Parse(mode PARSE_MODE) error {
 	if mode == PARSE_MODE_NONE {
 		panic("cannot parse with PARSE_MODE_NONE, you have a bug")
@@ -87,7 +94,9 @@ func (n *LocalNode) Parse(mode PARSE_MODE) error {
 			hasMeta = false
 		}
 		if !hasMeta {
-			n.document, err = syslang.NewDocument("")
+			document, parseErr := syslang.NewDocument("")
+			n.setDocument(document)
+			err = parseErr
 			if err != nil {
 				return err
 			}
@@ -98,7 +107,9 @@ func (n *LocalNode) Parse(mode PARSE_MODE) error {
 	}
 
 	start := time.Now()
-	n.document, err = syslang.NewDocument(text)
+	document, parseErr := syslang.NewDocument(text)
+	n.setDocument(document)
+	err = parseErr
 	if err != nil {
 		return err
 	}

@@ -41,7 +41,7 @@ build: ## build
 .PHONY: build
 
 install: ## install
-	go install .
+	go install -a .
 .PHONY: install
 
 bench: ## run benchmarks

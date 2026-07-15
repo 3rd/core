@@ -56,7 +56,7 @@ var taskCurrentCommand = &cobra.Command{
 
 		wiki, err := localWiki.NewLocalWiki(localWiki.LocalWikiConfig{
 			Root:  root,
-			Parse: "full",
+			Parse: localWiki.PARSE_MODE_META,
 		})
 		if err != nil {
 			panic(err)
@@ -71,6 +71,10 @@ var taskCurrentCommand = &cobra.Command{
 			meta := node.GetMeta()
 			nodeType, ok := meta["type"]
 			if !ok || (nodeType != "project" && nodeType != "person") {
+				continue
+			}
+
+			if err := node.Parse(localWiki.PARSE_MODE_FULL); err != nil {
 				continue
 			}
 

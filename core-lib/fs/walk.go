@@ -19,6 +19,11 @@ func WalkFiles(path string, filter *func(path string, info os.FileInfo) bool) ([
 	}
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		// skip entries we can't stat (e.g. vanished or permission denied)
+		if err != nil || info == nil {
+			return nil
+		}
+
 		// skip directories
 		if info.IsDir() {
 			return nil
